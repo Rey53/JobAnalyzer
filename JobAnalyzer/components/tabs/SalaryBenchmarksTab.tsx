@@ -108,7 +108,7 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                     <ScoreboardCard 
                         title="Recommended Annual Salary"
                         value="" // Overridden by children
-                        subtext="Target targets based on employment type"
+                        subtext="Strategic Market Targets (Negotiation Range)"
                         icon={<TrendingUp size={24}/>}
                         color="#16a34a" 
                     >
@@ -249,12 +249,16 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                 </p>
             </section>
 
-            {/* Compensation Comparison */}
             <section className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-6 border-2 border-teal-200">
-                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <FileText className="w-6 h-6 text-teal-600" />
-                    Employment Type Comparison
-                </h3>
+                <div className="mb-4">
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <FileText className="w-6 h-6 text-teal-600" />
+                        Employment Type Comparison (Based on Offer)
+                    </h3>
+                    <p className="text-xs text-teal-700 mt-1 italic">
+                        The values below are the mathematical equivalents of your <strong>current input salary</strong> of {currencyFormatter.format(data.salaryBreakdown.yearly)}.
+                    </p>
+                </div>
                 <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <CompensationCard 
                         title="W2 Employee Offer"
