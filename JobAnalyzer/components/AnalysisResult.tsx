@@ -5,6 +5,7 @@ import { ActiveTab } from '../types';
 import { OpportunityAnalyzerTab } from './tabs/OpportunityAnalyzerTab';
 import { SalaryBenchmarksTab } from './tabs/SalaryBenchmarksTab';
 import { OnboardingPlanTab } from './tabs/OnboardingPlanTab';
+import { InstructionsView } from './tabs/InstructionsView';
 import { Download, RefreshCw, Briefcase, DollarSign, CalendarCheck } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -60,6 +61,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
                 return <SalaryBenchmarksTab data={data} />;
             case ActiveTab.ONBOARDING:
                 return <OnboardingPlanTab data={data} />;
+            case ActiveTab.INSTRUCTIONS:
+                return <InstructionsView />;
             default:
                 return <OpportunityAnalyzerTab data={data} />;
         }

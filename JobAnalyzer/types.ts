@@ -10,6 +10,7 @@ export enum ActiveTab {
     ANALYZER = 'ANALYZER',
     BENCHMARKS = 'BENCHMARKS',
     ONBOARDING = 'ONBOARDING',
+    INSTRUCTIONS = 'INSTRUCTIONS',
 }
 
 export interface FormData {

@@ -9,6 +9,7 @@ import { LoadingSpinner } from './components/LoadingSpinner';
 import { LoginPage } from './components/LoginPage';
 import { BenchmarkView } from './components/tabs/BenchmarkView';
 import { OnboardingView } from './components/tabs/OnboardingView';
+import { InstructionsView } from './components/tabs/InstructionsView';
 import type { FormData, AnalysisData } from './types';
 import { AppState, ActiveTab } from './types';
 import { isAuthenticated, enforceAuthentication } from './utils/auth';
@@ -359,6 +360,12 @@ export default function App() {
                         >
                             📅 Onboarding Plan
                         </button>
+                        <button 
+                            onClick={() => setActiveTab(ActiveTab.INSTRUCTIONS)}
+                            className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.INSTRUCTIONS ? 'bg-white text-blue-700 shadow-md border-t-2 border-blue-600' : 'text-gray-500 hover:text-blue-600'}`}
+                        >
+                            ❓ Instructions & FAQ
+                        </button>
                     </div>
                 )}
 
@@ -388,6 +395,7 @@ export default function App() {
                             
                             {activeTab === ActiveTab.BENCHMARKS && <BenchmarkView />}
                             {activeTab === ActiveTab.ONBOARDING && <OnboardingView />}
+                            {activeTab === ActiveTab.INSTRUCTIONS && <InstructionsView />}
                         </>
                     )}
                 </main>
