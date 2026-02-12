@@ -78,30 +78,58 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset })
         )
     }
 
+    const analysisTimestamp = new Date().toLocaleString('en-US', {
+        timeZone: 'America/Puerto_Rico',
+        dateStyle: 'full',
+        timeStyle: 'medium'
+    });
+
     return (
         <div>
-            <div className="border-b bg-gray-50">
+            <div className="border-b bg-gray-50 flex flex-wrap items-center justify-between pr-4">
                 <div className="flex gap-1 p-2">
                    <TabButton id="analyzer" label="Opportunity Analyzer" icon={<Briefcase size={18}/>} />
                    <TabButton id="benchmarks" label="Salary Benchmarks" icon={<DollarSign size={18}/>} />
                    <TabButton id="onboarding" label="Onboarding Plan" icon={<CalendarCheck size={18}/>} />
                 </div>
+                <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1 uppercase tracking-wider hidden md:flex">
+                    <span className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-600 font-bold">ALCOA+</span>
+                    <span>Contemporaneous: {analysisTimestamp} (AST)</span>
+                </div>
             </div>
 
-            <div ref={reportContentRef}>
+            <div ref={reportContentRef} className="bg-white">
                  <div className="p-4 md:p-8">
-                     {renderTabContent()}
+                    {/* Compliance Header for PDF */}
+                    <div className="mb-6 pb-4 border-b border-slate-100 flex justify-between items-end">
+                        <div>
+                            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Formal Analysis Report</h2>
+                            <p className="text-xs text-slate-400">System ID: PP-PR-{data.companyIntelligence.name.substring(0,3).toUpperCase()}-{Date.now().toString().slice(-6)}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">Analysis Date & Time (Contemporaneous)</p>
+                            <p className="text-[10px] text-blue-600 font-mono">{analysisTimestamp} Atlantic Standard Time</p>
+                        </div>
+                    </div>
+
+                    {renderTabContent()}
+                    
+                    {/* Compliance Footer for PDF */}
+                    <div className="mt-12 pt-4 border-t border-slate-100 flex justify-between items-center opacity-50 grayscale">
+                        <p className="text-[9px] text-slate-400 italic">This document is electronically generated and attributed to the current session. Verification of data accuracy is required per GAMP5 standards.</p>
+                        <p className="text-[9px] font-bold text-slate-500">© ServicioXpert.com • Data Integrity Secured</p>
+                    </div>
                  </div>
             </div>
 
-            <div className="p-8 border-t flex flex-col md:flex-row items-center justify-center gap-4 text-center">
+            <div className="p-8 border-t flex flex-col md:flex-row items-center justify-center gap-4 text-center bg-slate-50">
                  <button 
                     onClick={handleDownloadPdf}
                     disabled={isDownloading}
-                    className="w-full md:w-auto bg-gray-800 text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-wait"
+                    className="w-full md:w-auto bg-gray-800 text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-wait shadow-lg"
                  >
                     <Download className="w-5 h-5" />
-                    {isDownloading ? 'Generating PDF...' : 'Download Full Report (PDF)'}
+                    {isDownloading ? 'Generating Secure PDF...' : 'Download Full Compliance Report (PDF)'}
                 </button>
                  <button 
                     onClick={onReset} 

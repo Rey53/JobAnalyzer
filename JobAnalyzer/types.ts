@@ -74,9 +74,12 @@ export interface AnalysisData {
         to: string;
         distance: string;
         time: string;
+        roundTripTime: string;
         monthlyGas: number;
         monthlyTolls: number;
         annualCost: number;
+        gasPricePerLiter: number;
+        tollRateBasis: string;
     };
     costOfLiving: {
         location: string;

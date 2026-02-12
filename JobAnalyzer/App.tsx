@@ -149,9 +149,12 @@ export default function App() {
                             to: { type: Type.STRING },
                             distance: { type: Type.STRING },
                             time: { type: Type.STRING },
+                            roundTripTime: { type: Type.STRING },
                             monthlyGas: { type: Type.NUMBER },
                             monthlyTolls: { type: Type.NUMBER },
                             annualCost: { type: Type.NUMBER },
+                            gasPricePerLiter: { type: Type.NUMBER },
+                            tollRateBasis: { type: Type.STRING },
                         }
                     },
                     costOfLiving: {

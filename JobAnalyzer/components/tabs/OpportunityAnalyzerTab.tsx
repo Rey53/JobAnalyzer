@@ -89,9 +89,24 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <StatCard label="Distance" value={data.commuteAnalysis.distance} subtext="one way" />
-                    <StatCard label="Commute Time" value={data.commuteAnalysis.time} subtext="estimated" />
-                    <StatCard label="Monthly Gas" value={currencyFormatter.format(data.commuteAnalysis.monthlyGas)} valueColor="text-orange-700" />
-                    <StatCard label="Monthly Tolls" value={currencyFormatter.format(data.commuteAnalysis.monthlyTolls)} valueColor="text-blue-700" />
+                    <StatCard label="Commute Time">
+                        <div className="flex flex-col">
+                            <div className="text-lg font-bold text-gray-800">{data.commuteAnalysis.time} <span className="text-[10px] text-gray-400 uppercase font-normal">One Way</span></div>
+                            <div className="text-lg font-bold text-blue-700">{data.commuteAnalysis.roundTripTime} <span className="text-[10px] text-blue-400 uppercase font-normal">Round Trip</span></div>
+                        </div>
+                    </StatCard>
+                    <StatCard 
+                        label="Monthly Gas" 
+                        value={currencyFormatter.format(data.commuteAnalysis.monthlyGas)} 
+                        valueColor="text-orange-700" 
+                        subtext={`@ ${data.commuteAnalysis.gasPricePerLiter}/L`}
+                    />
+                    <StatCard 
+                        label="Monthly Tolls" 
+                        value={currencyFormatter.format(data.commuteAnalysis.monthlyTolls)} 
+                        valueColor="text-blue-700" 
+                        subtext={data.commuteAnalysis.tollRateBasis}
+                    />
                      <div className="bg-gradient-to-br from-red-100 to-orange-100 rounded-lg p-4 border-2 border-red-300 shadow">
                         <div className="text-sm text-gray-700 font-semibold">Annual Commute</div>
                         <div className="text-2xl font-bold text-red-700">{currencyFormatter.format(data.commuteAnalysis.annualCost)}</div>
