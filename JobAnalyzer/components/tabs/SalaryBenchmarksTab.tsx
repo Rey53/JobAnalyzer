@@ -256,14 +256,14 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                         Employment Type Comparison (Based on Offer)
                     </h3>
                     <p className="text-xs text-teal-700 mt-1 italic">
-                        The values below are the mathematical equivalents of your <strong>current input salary</strong> of {currencyFormatter.format(data.salaryBreakdown.yearly)}.
+                        The values below are the mathematical equivalents of your <strong>current input {data.inputModality} salary</strong> of {currencyFormatter.format(data.salaryBreakdown.yearly)}.
                     </p>
                 </div>
                 <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <CompensationCard 
-                        title="W2 Employee Offer"
+                        title={data.inputModality === 'W2' ? "W2 Employee Offer (Base)" : "Equivalent W2 Basis"}
                         salary={compensationComparison.w2Salary}
-                        color="#2563eb" // blue-600
+                        color={data.inputModality === 'W2' ? "#2563eb" : "#64748b"} 
                         pros={[
                             "Employer pays half of FICA taxes",
                             "Access to subsidized benefits",
@@ -272,9 +272,9 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                         cons={[]}
                     />
                      <CompensationCard 
-                        title="Equivalent 1099 Contractor"
+                        title={data.inputModality === '1099' ? "1099 Contractor Offer (Base)" : "Equivalent 1099 Contractor"}
                         salary={compensationComparison.equivalent1099Salary}
-                        color="#d97706" // amber-600
+                        color={data.inputModality === '1099' ? "#d97706" : "#64748b"}
                         pros={[
                             "More flexibility & autonomy",
                             "Potential for more deductions",
@@ -285,10 +285,10 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                             {label: "Total Annual Difference", value: compensationComparison.explanation1099.totalDifference},
                         ]}
                     />
-                      <CompensationCard 
-                        title="Equivalent Form 480 Services"
+                       <CompensationCard 
+                        title={data.inputModality === '480' ? "Form 480 Services Offer (Base)" : "Equivalent Form 480 Services"}
                         salary={compensationComparison.equivalent480Salary}
-                        color="#0d9488" // teal-600
+                        color={data.inputModality === '480' ? "#0d9488" : "#64748b"}
                         pros={[
                            "Fixed tax withholding option",
                            "Common in PR professional services",

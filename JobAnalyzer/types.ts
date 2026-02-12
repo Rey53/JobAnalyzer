@@ -20,6 +20,7 @@ export interface FormData {
     livingIn: string;
     workingIn: string;
     salary: number;
+    modality: string;
     cvFile: File | null;
 }
 
@@ -59,6 +60,7 @@ export interface GroundingSource {
 
 export interface AnalysisData {
     solicitorName: string;
+    inputModality: string;
     companyIntelligence: {
         name: string;
         earnings: string;

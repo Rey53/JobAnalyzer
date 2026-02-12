@@ -106,6 +106,7 @@ export default function App() {
             - Candidate will be living in: ${formData.livingIn}
             - Candidate will be working in: ${formData.workingIn}
             - Offered Annual Salary: $${formData.salary.toLocaleString()}
+            - Contract Type (Modality): ${formData.modality}
 
             **Analysis Request (Expert Recruitment Perspective):**
             1.  **Company Intelligence**: Provide a "Tier" classification. Use a real-time web search to find the latest quarterly earnings (Q3/Q4 2024 or Q1 2025). Include the specific manufacturing presence in ${formData.workingIn}.
@@ -297,6 +298,16 @@ export default function App() {
             const jsonText = response.text.trim();
             const parsedData = JSON.parse(jsonText);
             parsedData.solicitorName = formData.solicitorName;
+            parsedData.inputModality = formData.modality;
+
+            // Ensure Salary Breakdown is mathematically accurate based on input
+            parsedData.salaryBreakdown = {
+                yearly: formData.salary,
+                monthly: Math.round(formData.salary / 12),
+                biweekly: Math.round(formData.salary / 26),
+                weekly: Math.round(formData.salary / 52),
+                hourly: Number((formData.salary / 2080).toFixed(2))
+            };
 
             // Extract grounding sources
             const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;

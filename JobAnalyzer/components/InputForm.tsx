@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { pharmaCompanies, municipalities, jobTitles } from '../constants';
+import { pharmaCompanies, municipalities, jobTitles, modalities } from '../constants';
 import type { FormData } from '../types';
 import { UploadCloud, FileText, X } from 'lucide-react';
 
@@ -38,6 +38,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onAnalyze }) => {
         livingIn: 'San Juan',
         workingIn: 'Barceloneta',
         salary: 70000,
+        modality: modalities[0],
         cvFile: null,
     });
     const [fileName, setFileName] = useState<string | null>(null);
@@ -92,7 +93,20 @@ export const InputForm: React.FC<InputFormProps> = ({ onAnalyze }) => {
                     <SelectInput label="Working In (Work Municipality)" name="workingIn" value={formData.workingIn} onChange={handleChange} options={municipalities} />
 
                     <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Offered Salary</label>
+                         <SelectInput 
+                            label="Employment Modality (Contract Type)" 
+                            name="modality" 
+                            value={formData.modality} 
+                            onChange={handleChange} 
+                            options={modalities} 
+                        />
+                        <p className="text-[10px] text-indigo-600 mt-1 italic">
+                            * Selecting W2 assumes standard employee benefits. 1099/480 will calculate tax and benefit overhead adjustments.
+                        </p>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Offered Salary (Based on {formData.modality})</label>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="relative">
                                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
@@ -126,6 +140,43 @@ export const InputForm: React.FC<InputFormProps> = ({ onAnalyze }) => {
                                 <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 text-sm">/ hour</span>
                             </div>
                         </div>
+                    </div>
+
+                    <div className="md:col-span-2 bg-white/50 p-4 rounded-lg border border-indigo-100 mb-4">
+                        <h4 className="text-xs font-bold text-indigo-800 uppercase mb-2">Live Market Equivalent Analysis</h4>
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className={`p-2 rounded border ${formData.modality === 'W2' ? 'bg-blue-100 border-blue-300' : 'bg-gray-50 border-gray-200 opacity-70'}`}>
+                                <p className="text-[10px] font-bold text-gray-500 uppercase">W2 Basis</p>
+                                <p className="text-sm font-bold text-gray-800">
+                                    {formData.modality === 'W2' 
+                                        ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(formData.salary)
+                                        : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(formData.salary * 0.77)}
+                                </p>
+                            </div>
+                            <div className={`p-2 rounded border ${formData.modality === '1099' ? 'bg-amber-100 border-amber-300' : 'bg-gray-50 border-gray-200 opacity-70'}`}>
+                                <p className="text-[10px] font-bold text-gray-500 uppercase">1099 Equivalent</p>
+                                <p className="text-sm font-bold text-gray-800">
+                                    {formData.modality === '1099' 
+                                        ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(formData.salary)
+                                        : formData.modality === 'W2'
+                                            ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(formData.salary * 1.3)
+                                            : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(formData.salary)}
+                                </p>
+                            </div>
+                            <div className={`p-2 rounded border ${formData.modality === '480' ? 'bg-teal-100 border-teal-300' : 'bg-gray-50 border-gray-200 opacity-70'}`}>
+                                <p className="text-[10px] font-bold text-gray-500 uppercase">480 Equivalent</p>
+                                <p className="text-sm font-bold text-gray-800">
+                                    {formData.modality === '480' 
+                                        ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(formData.salary)
+                                        : formData.modality === 'W2'
+                                            ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(formData.salary * 1.25)
+                                            : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(formData.salary * 0.95)}
+                                </p>
+                            </div>
+                        </div>
+                        <p className="text-[9px] text-gray-500 mt-2 italic">
+                            * Quick estimates for comparison. Full analysis will provide precise Puerto Rico tax and benefit breakdowns.
+                        </p>
                     </div>
 
                     <div className="md:col-span-2">

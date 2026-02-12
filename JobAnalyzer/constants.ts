@@ -108,3 +108,4 @@ export const jobTitles = [
     "Technical Writer",
     "Validation Specialist",
 ];
+export const modalities = ["W2", "1099", "480"];
