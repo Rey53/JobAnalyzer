@@ -115,6 +115,10 @@ export default function App() {
             4.  **Recruiter Recommendations**: 
                 - Calculate a "Quality of Life Score" (out of 10).
                 - Suggest "Expert Benchmark" salaries (Min, Ideal).
+                - **Crucial**: Provide the "Ideal Target" breakdown for three structures:
+                    *   **Ideal W2**: The target full-time salary.
+                    *   **Ideal 1099**: The target equivalent for a contractor.
+                    *   **Ideal 480**: The target for professional services (Accounting for PR 480 specific witholdings).
                 - Provide 4 high-impact negotiation strategies (e.g., relocation bonuses, sign-on for GAMP5 expertise).
                 - **Candidate Fit Score (0-10)**: Rigorous assessment of CV vs. Pharma Tier expectations. Deduct if missing GAMP5 for Senior roles.
             5.  **Compensation Structure**: W2 Breakdown + Equivalent 1099 and Form 480 (PR Services) salaries. Explain the 4% tax benefit under Act 60 if applicable for professional services.
@@ -177,6 +181,9 @@ export default function App() {
                         properties: {
                             minTargetSalary: { type: Type.NUMBER },
                             idealSalary: { type: Type.NUMBER },
+                            idealW2: { type: Type.NUMBER },
+                            ideal1099: { type: Type.NUMBER },
+                            ideal480: { type: Type.NUMBER },
                             qualityOfLifeScore: { type: Type.NUMBER },
                             negotiationStrategies: {
                                 type: Type.ARRAY,

@@ -94,6 +94,9 @@ export interface AnalysisData {
     recommendations: {
         minTargetSalary: number;
         idealSalary: number;
+        idealW2: number;
+        ideal1099: number;
+        ideal480: number;
         qualityOfLifeScore: number;
         negotiationStrategies: string[];
         candidateFitScore: {

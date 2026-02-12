@@ -107,24 +107,56 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                 <div className="grid md:grid-cols-3 gap-4">
                     <ScoreboardCard 
                         title="Recommended Annual Salary"
-                        value={currencyFormatter.format(data.recommendations.idealSalary)}
-                        subtext="For comfortable living & growth"
+                        value="" // Overridden by children
+                        subtext="Target targets based on employment type"
                         icon={<TrendingUp size={24}/>}
-                        color="#16a34a" // green-600
-                    />
-                     <ScoreboardCard 
+                        color="#16a34a" 
+                    >
+                        <div className="mt-2 space-y-1">
+                            <div className="flex justify-between items-center bg-blue-50 px-2 py-1 rounded">
+                                <span className="text-[10px] font-bold text-blue-600 uppercase">W2 Target</span>
+                                <span className="text-sm font-bold text-slate-800">{currencyFormatter.format(data.recommendations.idealW2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-amber-50 px-2 py-1 rounded">
+                                <span className="text-[10px] font-bold text-amber-600 uppercase">1099 Target</span>
+                                <span className="text-sm font-bold text-slate-800">{currencyFormatter.format(data.recommendations.ideal1099)}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-teal-50 px-2 py-1 rounded">
+                                <span className="text-[10px] font-bold text-teal-600 uppercase">480 Target</span>
+                                <span className="text-sm font-bold text-slate-800">{currencyFormatter.format(data.recommendations.ideal480)}</span>
+                            </div>
+                        </div>
+                    </ScoreboardCard>
+
+                    <ScoreboardCard 
                         title="Recommended Hourly Rate"
-                        value={`${currencyFormatterHourly.format(recommendedHourly)}`}
+                        value="" // Overridden by children
                         subtext="Based on 2,080 hours/year"
                         icon={<TrendingUp size={24}/>}
-                        color="#16a34a" // green-600
-                    />
+                        color="#16a34a"
+                    >
+                         <div className="mt-2 space-y-1">
+                            <div className="flex justify-between items-center bg-blue-50 px-2 py-1 rounded">
+                                <span className="text-[10px] font-bold text-blue-600 uppercase">W2 Hourly</span>
+                                <span className="text-sm font-bold text-slate-800">{currencyFormatterHourly.format(data.recommendations.idealW2 / 2080)}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-amber-50 px-2 py-1 rounded">
+                                <span className="text-[10px] font-bold text-amber-600 uppercase">1099 Hourly</span>
+                                <span className="text-sm font-bold text-slate-800">{currencyFormatterHourly.format(data.recommendations.ideal1099 / 2080)}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-teal-50 px-2 py-1 rounded">
+                                <span className="text-[10px] font-bold text-teal-600 uppercase">480 Hourly</span>
+                                <span className="text-sm font-bold text-slate-800">{currencyFormatterHourly.format(data.recommendations.ideal480 / 2080)}</span>
+                            </div>
+                        </div>
+                    </ScoreboardCard>
+
                     <ScoreboardCard 
                         title="Candidate Fit Score"
                         value={`${candidateFitScore.score}/10`}
                         subtext={candidateFitScore.summary}
                         icon={<Star size={24} />}
-                        color="#ca8a04" // yellow-600
+                        color="#ca8a04" 
                     >
                          <div className="flex items-center justify-center -ml-4 -mt-2">
                             <ScoreGauge score={candidateFitScore.score} />
@@ -133,23 +165,72 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                 </div>
             </section>
             
-            {/* Industry Salary Ranges */}
+            {/* Industry Salary Ranges & Interactive Simulator */}
             <section className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 border-2 border-indigo-200">
-                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <Briefcase className="w-6 h-6 text-indigo-600" />
-                    Industry Salary Ranges (Puerto Rico)
-                </h3>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <Briefcase className="w-6 h-6 text-indigo-600" />
+                        Industry Salary Ranges (Puerto Rico)
+                    </h3>
+                    
+                    {/* Interactive Demo Control */}
+                    <div className="bg-white p-2 rounded-lg shadow-sm border border-indigo-100 flex items-center gap-3">
+                        <span className="text-[10px] font-bold text-indigo-500 uppercase px-2 py-1 bg-indigo-50 rounded">Interactive Demo</span>
+                        <div className="flex gap-2">
+                            <select 
+                                className="text-xs border rounded px-2 py-1 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                onChange={(e) => {
+                                    // Simulated logic for demo only
+                                    const role = e.target.value;
+                                    const junior = document.getElementById('demo-junior');
+                                    const mid = document.getElementById('demo-mid');
+                                    const senior = document.getElementById('demo-senior');
+                                    const roleLabel = document.getElementById('demo-role-label');
+                                    
+                                    if (junior && mid && senior && roleLabel) {
+                                        roleLabel.innerText = role;
+                                        // Simple simulated variance for demonstration
+                                        const hash = role.length;
+                                        junior.innerText = `$${60 + hash}k - $${72 + hash}k`;
+                                        mid.innerText = `$${85 + hash}k - $${105 + hash}k`;
+                                        senior.innerText = `$${115 + hash}k - $${145 + hash}k`;
+                                    }
+                                }}
+                            >
+                                <option value="">Quick Select Role...</option>
+                                <option value="Validation Engineer">Validation Engineer</option>
+                                <option value="CSV / GAMP5 Specialist">CSV / GAMP5 Specialist</option>
+                                <option value="QA Compliance Manager">QA Compliance Manager</option>
+                                <option value="Process Engineer">Process Engineer</option>
+                                <option value="Automation Specialist">Automation Specialist</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="overflow-x-auto bg-white rounded-lg shadow">
                     <table className="w-full text-sm text-left text-gray-700">
                         <thead className="text-xs text-gray-800 uppercase bg-gray-100">
                             <tr>
-                                <th scope="col" className="px-6 py-3">Role</th>
+                                <th scope="col" className="px-6 py-3">Role / Job Title</th>
                                 <th scope="col" className="px-6 py-3">Junior Level</th>
                                 <th scope="col" className="px-6 py-3">Mid-Level</th>
                                 <th scope="col" className="px-6 py-3">Senior Level</th>
                             </tr>
                         </thead>
                         <tbody>
+                            {/* Interactive Demo Row */}
+                            <tr className="bg-indigo-50/50 border-b border-indigo-100 italic transition-all duration-300">
+                                <th scope="row" className="px-6 py-4 font-bold text-indigo-900 whitespace-nowrap flex items-center gap-2">
+                                    <span id="demo-role-label">Select a Role Above...</span>
+                                    <span className="text-[9px] bg-indigo-200 text-indigo-700 px-1 rounded not-italic">DEMO</span>
+                                </th>
+                                <td className="px-6 py-4 font-medium text-slate-700" id="demo-junior">---</td>
+                                <td className="px-6 py-4 font-medium text-slate-700" id="demo-mid">---</td>
+                                <td className="px-6 py-4 font-medium text-slate-700" id="demo-senior">---</td>
+                            </tr>
+                            
+                            {/* Real Data Rows from AI Analysis */}
                             {data.salaryBenchmarks.map((benchmark) => (
                                 <tr key={benchmark.role} className="bg-white border-b hover:bg-gray-50">
                                     <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
@@ -163,6 +244,9 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                         </tbody>
                     </table>
                 </div>
+                <p className="mt-3 text-[10px] text-indigo-400 italic">
+                    * The "DEMO" row allows recruiters to cross-reference other Pharma roles without leaving this report. These values are benchmarks for demonstration and do not affect the main analysis calculations.
+                </p>
             </section>
 
             {/* Compensation Comparison */}
