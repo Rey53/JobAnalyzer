@@ -104,7 +104,7 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
                         label="Monthly Gas" 
                         value={currencyFormatter.format(data.commuteAnalysis.monthlyGas)} 
                         valueColor="text-orange-700" 
-                        subtext={`@ ${data.commuteAnalysis.gasPricePerLiter}/L`}
+                        subtext={`@ ${data.commuteAnalysis.gasPricePerLiter}/L (Round Trip)`}
                     />
                     <StatCard 
                         label="Monthly Tolls" 

@@ -111,7 +111,7 @@ export default function App() {
             1.  **Company Intelligence**: Provide a "Tier" classification. Use a real-time web search to find the latest quarterly earnings (Q3/Q4 2024 or Q1 2025). Include the specific manufacturing presence in ${formData.workingIn}.
             2.  **Commute & TCOL Analysis**: Estimated distance and time from ${formData.livingIn} to ${formData.workingIn}. 
                 - **Distance**: Provide in MILES (One Way and Round Trip). Convert from KM if necessary (1km = 0.621mi).
-                - **Costs**: Calculate monthly fuel costs using $0.91/L ($3.44/gal approx) and estimated PR-22/PR-52 tolls. 
+                - **Costs**: Calculate monthly fuel costs based on the **Round Trip** distance (20 days/month) using $0.91/L ($3.44/gal approx) and estimated PR-22/PR-52 tolls. 
             3.  **Cost of Living (The "LUMA Delta")**: Estimated monthly costs for housing and utilities in ${formData.workingIn}. Specifically calculate the energy cost impact using the $0.33/kWh benchmark.
             4.  **Recruiter Recommendations**: 
                 - Calculate a "Quality of Life Score" (out of 10).
@@ -296,6 +296,7 @@ export default function App() {
             
             const jsonText = response.text.trim();
             const parsedData = JSON.parse(jsonText);
+            parsedData.solicitorName = formData.solicitorName;
 
             // Extract grounding sources
             const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;

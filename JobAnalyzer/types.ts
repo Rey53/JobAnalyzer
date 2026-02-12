@@ -14,6 +14,7 @@ export enum ActiveTab {
 }
 
 export interface FormData {
+    solicitorName: string;
     company: string;
     jobTitle: string;
     livingIn: string;
@@ -57,6 +58,7 @@ export interface GroundingSource {
 }
 
 export interface AnalysisData {
+    solicitorName: string;
     companyIntelligence: {
         name: string;
         earnings: string;
