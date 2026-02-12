@@ -72,7 +72,8 @@ export interface AnalysisData {
     commuteAnalysis: {
         from: string;
         to: string;
-        distance: string;
+        distanceMiles: string;
+        roundTripDistanceMiles: string;
         time: string;
         roundTripTime: string;
         monthlyGas: number;

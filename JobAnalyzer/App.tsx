@@ -108,7 +108,9 @@ export default function App() {
 
             **Analysis Request (Expert Recruitment Perspective):**
             1.  **Company Intelligence**: Provide a "Tier" classification. Use a real-time web search to find the latest quarterly earnings (Q3/Q4 2024 or Q1 2025). Include the specific manufacturing presence in ${formData.workingIn}.
-            2.  **Commute & TCOL Analysis**: Estimated distance and time from ${formData.livingIn} to ${formData.workingIn}. Calculate monthly fuel costs using $0.91/L and estimated PR-22/PR-52 tolls. 
+            2.  **Commute & TCOL Analysis**: Estimated distance and time from ${formData.livingIn} to ${formData.workingIn}. 
+                - **Distance**: Provide in MILES (One Way and Round Trip). Convert from KM if necessary (1km = 0.621mi).
+                - **Costs**: Calculate monthly fuel costs using $0.91/L ($3.44/gal approx) and estimated PR-22/PR-52 tolls. 
             3.  **Cost of Living (The "LUMA Delta")**: Estimated monthly costs for housing and utilities in ${formData.workingIn}. Specifically calculate the energy cost impact using the $0.33/kWh benchmark.
             4.  **Recruiter Recommendations**: 
                 - Calculate a "Quality of Life Score" (out of 10).
@@ -147,7 +149,8 @@ export default function App() {
                         properties: {
                             from: { type: Type.STRING },
                             to: { type: Type.STRING },
-                            distance: { type: Type.STRING },
+                            distanceMiles: { type: Type.STRING },
+                            roundTripDistanceMiles: { type: Type.STRING },
                             time: { type: Type.STRING },
                             roundTripTime: { type: Type.STRING },
                             monthlyGas: { type: Type.NUMBER },
@@ -353,30 +356,33 @@ export default function App() {
                 )}
 
                 <main className="bg-white rounded-b-2xl shadow-2xl overflow-hidden min-h-[600px]">
-                    {activeTab === ActiveTab.ANALYZER && (
+                    {appState === AppState.RESULT && analysisData ? (
+                        <AnalysisResult data={analysisData} activeView={activeTab} onReset={handleReset} />
+                    ) : (
                         <>
-                            {appState === AppState.INITIAL && <InputForm onAnalyze={handleAnalysis} />}
-                            {appState === AppState.LOADING && <LoadingSpinner />}
-                            {appState === AppState.ERROR && (
-                                <div className="p-8 text-center">
-                                    <h2 className="text-2xl font-bold text-red-600 mb-4">Analysis Failed</h2>
-                                    <p className="text-red-500 bg-red-50 p-4 rounded-lg">{error}</p>
-                                    <button
-                                        onClick={handleReset}
-                                        className="mt-6 bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-all"
-                                    >
-                                        Try Again
-                                    </button>
-                                </div>
+                            {activeTab === ActiveTab.ANALYZER && (
+                                <>
+                                    {appState === AppState.INITIAL && <InputForm onAnalyze={handleAnalysis} />}
+                                    {appState === AppState.LOADING && <LoadingSpinner />}
+                                    {appState === AppState.ERROR && (
+                                        <div className="p-8 text-center">
+                                            <h2 className="text-2xl font-bold text-red-600 mb-4">Analysis Failed</h2>
+                                            <p className="text-red-500 bg-red-50 p-4 rounded-lg">{error}</p>
+                                            <button
+                                                onClick={handleReset}
+                                                className="mt-6 bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-all"
+                                            >
+                                                Try Again
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
                             )}
-                            {appState === AppState.RESULT && analysisData && (
-                                <AnalysisResult data={analysisData} onReset={handleReset} />
-                            )}
+                            
+                            {activeTab === ActiveTab.BENCHMARKS && <BenchmarkView />}
+                            {activeTab === ActiveTab.ONBOARDING && <OnboardingView />}
                         </>
                     )}
-                    
-                    {activeTab === ActiveTab.BENCHMARKS && <BenchmarkView />}
-                    {activeTab === ActiveTab.ONBOARDING && <OnboardingView />}
                 </main>
                 <Footer />
             </div>
