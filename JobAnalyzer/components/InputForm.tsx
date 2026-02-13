@@ -5,32 +5,34 @@ import { pharmaCompanies, municipalities, jobTitles, modalities } from '../const
 import type { FormData } from '../types';
 import { UploadCloud, FileText, X } from 'lucide-react';
 
+
 interface InputFormProps {
     onAnalyze: (formData: FormData) => void;
+    isDarkMode?: boolean;
 }
 
-const SelectInput: React.FC<{ label: string; name: string; value: string; onChange: (e: ChangeEvent<HTMLSelectElement>) => void; options: string[] }> = ({ label, name, value, onChange, options }) => (
+const SelectInput: React.FC<{ label: string; name: string; value: string; onChange: (e: ChangeEvent<HTMLSelectElement>) => void; options: string[]; isDarkMode?: boolean }> = ({ label, name, value, onChange, options, isDarkMode = false }) => (
     <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-        <select name={name} value={value} onChange={onChange} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+        <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
+        <select name={name} value={value} onChange={onChange} className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${isDarkMode ? 'bg-gray-800 border-gray-600 text-gray-100' : 'bg-white border-gray-300'}`}>
             {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
     </div>
 );
 
-const NumberInput: React.FC<{ label: string; name: string; value: number; onChange: (e: ChangeEvent<HTMLInputElement>) => void; }> = ({ label, name, value, onChange }) => (
+const NumberInput: React.FC<{ label: string; name: string; value: number; onChange: (e: ChangeEvent<HTMLInputElement>) => void; isDarkMode?: boolean }> = ({ label, name, value, onChange, isDarkMode = false }) => (
     <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+        <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
         <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
-            <input type="number" name={name} value={value} onChange={onChange} className="w-full pl-7 pr-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="70000" />
-            <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">/ year</span>
+            <span className={`absolute inset-y-0 left-0 pl-3 flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>$</span>
+            <input type="number" name={name} value={value} onChange={onChange} className={`w-full pl-7 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${isDarkMode ? 'bg-gray-800 border-gray-600 text-gray-100' : 'bg-white border-gray-300'}`} placeholder="70000" />
+            <span className={`absolute inset-y-0 right-0 pr-3 flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>/ year</span>
         </div>
     </div>
 );
 
 
-export const InputForm: React.FC<InputFormProps> = ({ onAnalyze }) => {
+export const InputForm: React.FC<InputFormProps> = ({ onAnalyze, isDarkMode = false }) => {
     const [formData, setFormData] = useState<FormData>({
         solicitorName: '',
         company: pharmaCompanies[0],
@@ -91,8 +93,8 @@ export const InputForm: React.FC<InputFormProps> = ({ onAnalyze }) => {
     
     return (
         <form onSubmit={handleSubmit} className="p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Enter Opportunity Details</h2>
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200">
+            <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>Enter Opportunity Details</h2>
+            <div className={`rounded-xl p-6 border-2 ${isDarkMode ? 'bg-gray-800/50 border-blue-500' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'}`}>
                 <div className="grid md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Name of the Solicitor</label>

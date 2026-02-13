@@ -164,27 +164,18 @@ export default function App() {
             5.  **Compensation Structure**: W2 Breakdown + Equivalent 1099 and Form 480 (PR Services) salaries. Explain the 4% tax benefit under Act 60 if applicable for professional services.
             6.  **Onboarding Plan**: A technical 30-60-90 day plan focused on GMP training, site-specific safety, and validation compliance.
             7.  **CV Evaluation (Expert Critique)**: 
-                ${jdBase64 ? `CRITICAL: You have access to the full Job Description. Perform a LINE-BY-LINE comparison between the CV and JD. For each requirement in the JD, assess if the candidate's CV demonstrates that skill/qualification.` : `Compare the CV against industry standards for ${formData.jobTitle} positions.`}
+                ${jdBase64 ? `Compare the CV line-by-line against the Job Description.` : `Compare the CV against ${formData.jobTitle} industry standards.`}
                 
                 Provide:
-                - **Overall Match Percentage (0-100)**: How well does the CV align with the ${jdBase64 ? "Job Description" : "role requirements"}?
-                - **3-5 Key Strengths**: Specific accomplishments, certifications, or experiences that make the candidate competitive.
-                - **3-5 Critical Weaknesses/Gaps**: Missing skills, certifications, or experiences that could disqualify them or weaken their application.
-                - **Skill Gaps (Detailed)**: For EACH gap, provide:
-                    * Skill name (e.g., "GAMP 5 CSV Expertise", "FDA 21 CFR Part 11 Knowledge")
-                    * Priority: Critical/High/Medium
-                    * Current level (e.g., "Not Mentioned", "Basic", "Intermediate")
-                    * Required level (e.g., "Expert", "Certified", "5+ years")
-                    * Learning path: Step-by-step plan with specific courses/certs
-                - **Learning Resources**: For top 5 skill gaps, provide SPECIFIC resources:
-                    * Title (e.g., "GAMP 5 Certification Course")
-                    * Type (Course, Certification, Book, Workshop, Webinar)
-                    * Provider (e.g., "ISPE", "Udemy", "LinkedIn Learning", "PDA")
-                    * Duration (e.g., "40 hours", "3 months")
-                    * Cost estimate (e.g., "$500", "Free", "$1,200")
-                    * URL (if available, or "Search: [exact search term]")
-                - **Improvement Plan**: 5-7 actionable steps ranked by impact, with timelines (e.g., "Week 1-2: Complete GAMP 5 fundamentals", "Month 2: Obtain CSV certification")
-                - **Timeline**: Realistic estimate for how long it will take to become fully qualified (e.g., "3-6 months with focused effort")
+                - **Overall Match (%)**:  How well the CV aligns (0-100).
+                - **3-5 Strengths**: Key competitive advantages.
+                - **3-5 Weaknesses**: Critical missing elements.
+                - **Top 3 Skill Gaps ONLY**: For each, provide:
+                    * Skill, Priority (Critical/High/Medium), Current vs Required level
+                    * 2-3 step learning path
+                - **Top 3 Learning Resources ONLY**: Title, Type, Provider, Duration, Cost, URL/Search term
+                - **5-step Improvement Plan** with timelines
+                - **Timeline**: Estimated months to become qualified
 
             Return all information as a single JSON object matching the provided schema.
 
@@ -435,17 +426,45 @@ export default function App() {
         }
       }
 
-      let jsonText = response.text.trim();
-      // Remove markdown code blocks if present
-      jsonText = jsonText
-        .replace(/^```json\s*/, "")
-        .replace(/^```\s*/, "")
-        .replace(/\s*```$/, "");
-      const parsedData = JSON.parse(jsonText);
+      // Parse response with robust error handling
+      let parsedData: AnalysisData;
+      try {
+        const rawText = response.text();
+        console.log("Raw response length:", rawText.length);
+        
+        // Sanitize JSON: Remove potential trailing commas and fix common issues
+        let sanitizedJson = rawText
+          .replace(/^```json\s*/, "") // Remove markdown code blocks if present
+          .replace(/^```\s*/, "")
+          .replace(/\s*```$/, "")
+          .replace(/,\s*}/g, '}')  // Remove trailing commas before }
+          .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
+          .replace(/\n/g, ' ')     // Remove newlines that might break parsing
+          .trim();
+        
+        parsedData = JSON.parse(sanitizedJson);
+        console.log("Successfully parsed AI response");
+      } catch (parseError: any) {
+        console.error("JSON Parse Error:", parseError);
+        console.error("Error at position:", parseError.message);
+        
+        // Attempt a more aggressive fix
+        try {
+          const rawText = response.text();
+          // Try to extract valid JSON from potentially truncated response
+          let fixedJson = rawText.substring(0, rawText.lastIndexOf('}') + 1);
+          parsedData = JSON.parse(fixedJson);
+          console.log("Recovered from JSON error using substring method");
+        } catch (secondError) {
+          throw new Error(`Failed to parse AI response: ${parseError.message}. The response may be too long or malformed. Try simplifying your request.`);
+        }
+      }
+
+      // Attach input modality and solicitor
       parsedData.solicitorName = formData.solicitorName;
       parsedData.inputModality = formData.modality;
 
-      // Ensure Salary Breakdown is mathematically accurate based on input
+      // Calculate salary breakdown
       parsedData.salaryBreakdown = {
         yearly: formData.salary,
         monthly: Math.round(formData.salary / 12),
@@ -466,7 +485,7 @@ export default function App() {
         // Deduplicate sources based on URI
         const uniqueSources = Array.from(
           new Map(sources.map((item: any) => [item["uri"], item])).values(),
-        );
+        ) as { uri: string; title: string }[];
 
         if (uniqueSources.length > 0) {
           parsedData.companyIntelligence.groundingSources = uniqueSources;
@@ -775,7 +794,7 @@ export default function App() {
               {activeTab === ActiveTab.ANALYZER && (
                 <>
                   {appState === AppState.INITIAL && (
-                    <InputForm onAnalyze={handleAnalysis} />
+                    <InputForm onAnalyze={handleAnalysis} isDarkMode={isDarkMode} />
                   )}
                   {appState === AppState.LOADING && <LoadingSpinner />}
                   {appState === AppState.ERROR && (
