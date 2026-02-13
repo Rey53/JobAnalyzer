@@ -7,7 +7,7 @@ interface TabProps {
     data: AnalysisData;
 }
 
-const StatCard: React.FC<{ label: string; value: string | number; valueColor?: string; subtext?: string; children?: React.ReactNode; faded?: boolean }> = ({ label, value, valueColor = 'text-gray-800', subtext, children, faded = false }) => (
+const StatCard: React.FC<{ label: string; value?: string | number; valueColor?: string; subtext?: string; children?: React.ReactNode; faded?: boolean }> = ({ label, value, valueColor = 'text-gray-800', subtext, children, faded = false }) => (
     <div className={`bg-white rounded-lg p-4 shadow transition-opacity duration-300 ${faded ? 'opacity-40 grayscale' : 'opacity-100'}`}>
         <div className="text-sm text-gray-600">{label}</div>
         {children ? children : <div className={`text-xl md:text-2xl font-bold ${valueColor}`}>{value}</div>}

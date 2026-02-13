@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { AnalysisData } from '../../types';
 import { Briefcase, FileText, Plus, Minus, Star, Award, TrendingUp } from 'lucide-react';
@@ -92,9 +91,27 @@ const CompensationCard: React.FC<{title: string, salary: number, pros: string[],
 
 
 export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
-    const recommendedHourly = data.recommendations.idealSalary / 2080;
-    const { candidateFitScore } = data.recommendations;
-    const { compensationComparison } = data;
+    // Defensive coding
+    const recommendations = data?.recommendations || {};
+    const idealSalary = recommendations.idealSalary || 0;
+    const idealW2 = recommendations.idealW2 || 0;
+    const ideal1099 = recommendations.ideal1099 || 0;
+    const ideal480 = recommendations.ideal480 || 0;
+    const candidateFitScore = recommendations.candidateFitScore || { score: 0, summary: 'N/A' };
+    
+    // Safety check for salary benchmarks array
+    const benchmarks = Array.isArray(data?.salaryBenchmarks) ? data.salaryBenchmarks : [];
+    
+    // Helper to avoid undefined access
+    const compensationComparison = data?.compensationComparison || {};
+    const w2Salary = compensationComparison.w2Salary || 0;
+    const equivalent1099Salary = compensationComparison.equivalent1099Salary || 0;
+    const equivalent480Salary = compensationComparison.equivalent480Salary || 0;
+    const explanation1099 = compensationComparison.explanation1099 || { selfEmploymentTax: 'N/A', benefitsCost: 'N/A', totalDifference: 'N/A' };
+    const explanation480 = compensationComparison.explanation480 || { taxWithholding: 'N/A', benefitsCost: 'N/A', totalDifference: 'N/A' };
+
+    const safeInputModality = data?.inputModality || 'W2';
+    const safeYearlySalary = data?.salaryBreakdown?.yearly || 0;
 
     return (
         <div className="space-y-8">
@@ -115,15 +132,15 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                         <div className="mt-2 space-y-1">
                             <div className="flex justify-between items-center bg-blue-50 px-2 py-1 rounded">
                                 <span className="text-[10px] font-bold text-blue-600 uppercase">W2 Target</span>
-                                <span className="text-sm font-bold text-slate-800">{currencyFormatter.format(data.recommendations.idealW2)}</span>
+                                <span className="text-sm font-bold text-slate-800">{currencyFormatter.format(idealW2)}</span>
                             </div>
                             <div className="flex justify-between items-center bg-amber-50 px-2 py-1 rounded">
                                 <span className="text-[10px] font-bold text-amber-600 uppercase">1099 Target</span>
-                                <span className="text-sm font-bold text-slate-800">{currencyFormatter.format(data.recommendations.ideal1099)}</span>
+                                <span className="text-sm font-bold text-slate-800">{currencyFormatter.format(ideal1099)}</span>
                             </div>
                             <div className="flex justify-between items-center bg-teal-50 px-2 py-1 rounded">
                                 <span className="text-[10px] font-bold text-teal-600 uppercase">480 Target</span>
-                                <span className="text-sm font-bold text-slate-800">{currencyFormatter.format(data.recommendations.ideal480)}</span>
+                                <span className="text-sm font-bold text-slate-800">{currencyFormatter.format(ideal480)}</span>
                             </div>
                         </div>
                     </ScoreboardCard>
@@ -138,15 +155,15 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                          <div className="mt-2 space-y-1">
                             <div className="flex justify-between items-center bg-blue-50 px-2 py-1 rounded">
                                 <span className="text-[10px] font-bold text-blue-600 uppercase">W2 Hourly</span>
-                                <span className="text-sm font-bold text-slate-800">{currencyFormatterHourly.format(data.recommendations.idealW2 / 2080)}</span>
+                                <span className="text-sm font-bold text-slate-800">{currencyFormatterHourly.format(idealW2 / 2080)}</span>
                             </div>
                             <div className="flex justify-between items-center bg-amber-50 px-2 py-1 rounded">
                                 <span className="text-[10px] font-bold text-amber-600 uppercase">1099 Hourly</span>
-                                <span className="text-sm font-bold text-slate-800">{currencyFormatterHourly.format(data.recommendations.ideal1099 / 2080)}</span>
+                                <span className="text-sm font-bold text-slate-800">{currencyFormatterHourly.format(ideal1099 / 2080)}</span>
                             </div>
                             <div className="flex justify-between items-center bg-teal-50 px-2 py-1 rounded">
                                 <span className="text-[10px] font-bold text-teal-600 uppercase">480 Hourly</span>
-                                <span className="text-sm font-bold text-slate-800">{currencyFormatterHourly.format(data.recommendations.ideal480 / 2080)}</span>
+                                <span className="text-sm font-bold text-slate-800">{currencyFormatterHourly.format(ideal480 / 2080)}</span>
                             </div>
                         </div>
                     </ScoreboardCard>
@@ -231,7 +248,7 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                             </tr>
                             
                             {/* Real Data Rows from AI Analysis */}
-                            {data.salaryBenchmarks.map((benchmark) => (
+                            {benchmarks.map((benchmark) => (
                                 <tr key={benchmark.role} className="bg-white border-b hover:bg-gray-50">
                                     <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                                         {benchmark.role}
@@ -256,14 +273,14 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                         Employment Type Comparison (Based on Offer)
                     </h3>
                     <p className="text-xs text-teal-700 mt-1 italic">
-                        The values below are the mathematical equivalents of your <strong>current input {data.inputModality} salary</strong> of {currencyFormatter.format(data.salaryBreakdown.yearly)}.
+                        The values below are the mathematical equivalents of your <strong>current input {safeInputModality} salary</strong> of {currencyFormatter.format(safeYearlySalary)}.
                     </p>
                 </div>
                 <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <CompensationCard 
-                        title={data.inputModality === 'W2' ? "W2 Employee Offer (Base)" : "Equivalent W2 Basis"}
-                        salary={compensationComparison.w2Salary}
-                        color={data.inputModality === 'W2' ? "#2563eb" : "#64748b"} 
+                        title={safeInputModality === 'W2' ? "W2 Employee Offer (Base)" : "Equivalent W2 Basis"}
+                        salary={w2Salary}
+                        color={safeInputModality === 'W2' ? "#2563eb" : "#64748b"} 
                         pros={[
                             "Employer pays half of FICA taxes",
                             "Access to subsidized benefits",
@@ -272,31 +289,31 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                         cons={[]}
                     />
                      <CompensationCard 
-                        title={data.inputModality === '1099' ? "1099 Contractor Offer (Base)" : "Equivalent 1099 Contractor"}
-                        salary={compensationComparison.equivalent1099Salary}
-                        color={data.inputModality === '1099' ? "#d97706" : "#64748b"}
+                        title={safeInputModality === '1099' ? "1099 Contractor Offer (Base)" : "Equivalent 1099 Contractor"}
+                        salary={equivalent1099Salary}
+                        color={safeInputModality === '1099' ? "#d97706" : "#64748b"}
                         pros={[
                             "More flexibility & autonomy",
                             "Potential for more deductions",
                         ]}
                         cons={[
-                            {label: "Self-Employment Tax", value: compensationComparison.explanation1099.selfEmploymentTax},
-                            {label: "Benefits Costs", value: compensationComparison.explanation1099.benefitsCost},
-                            {label: "Total Annual Difference", value: compensationComparison.explanation1099.totalDifference},
+                            {label: "Self-Employment Tax", value: explanation1099.selfEmploymentTax || 'N/A'},
+                            {label: "Benefits Costs", value: explanation1099.benefitsCost || 'N/A'},
+                            {label: "Total Annual Difference", value: explanation1099.totalDifference || 'N/A'},
                         ]}
                     />
                        <CompensationCard 
-                        title={data.inputModality === '480' ? "Form 480 Services Offer (Base)" : "Equivalent Form 480 Services"}
-                        salary={compensationComparison.equivalent480Salary}
-                        color={data.inputModality === '480' ? "#0d9488" : "#64748b"}
+                        title={safeInputModality === '480' ? "Form 480 Services Offer (Base)" : "Equivalent Form 480 Services"}
+                        salary={equivalent480Salary}
+                        color={safeInputModality === '480' ? "#0d9488" : "#64748b"}
                         pros={[
                            "Fixed tax withholding option",
                            "Common in PR professional services",
                         ]}
                         cons={[
-                            {label: "Tax Withholding", value: compensationComparison.explanation480.taxWithholding},
-                            {label: "Benefits Costs", value: compensationComparison.explanation480.benefitsCost},
-                            {label: "Total Annual Difference", value: compensationComparison.explanation480.totalDifference},
+                            {label: "Tax Withholding", value: explanation480.taxWithholding || 'N/A'},
+                            {label: "Benefits Costs", value: explanation480.benefitsCost || 'N/A'},
+                            {label: "Total Annual Difference", value: explanation480.totalDifference || 'N/A'},
                         ]}
                     />
                 </div>

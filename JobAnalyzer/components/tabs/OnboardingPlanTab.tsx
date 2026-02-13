@@ -32,7 +32,11 @@ const OnboardingPhaseCard: React.FC<{ phase: string; title: string; tasks: strin
 
 
 export const OnboardingPlanTab: React.FC<TabProps> = ({ data }) => {
-    const { days30, days60, days90 } = data.onboardingPlan;
+    const plan = data?.onboardingPlan || {};
+    const days30 = plan.days30 || { title: 'First 30 Days', tasks: [] };
+    const days60 = plan.days60 || { title: 'First 60 Days', tasks: [] };
+    const days90 = plan.days90 || { title: 'First 90 Days', tasks: [] };
+
     return (
         <div className="space-y-6">
             <section className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-200">
@@ -43,9 +47,9 @@ export const OnboardingPlanTab: React.FC<TabProps> = ({ data }) => {
                 <p className="text-gray-600 mb-6">Use this plan as a guide to hit the ground running and make a strong impact in your new role.</p>
 
                 <div className="space-y-0">
-                   <OnboardingPhaseCard phase="30" title={days30.title} tasks={days30.tasks} />
-                   <OnboardingPhaseCard phase="60" title={days60.title} tasks={days60.tasks} />
-                   <OnboardingPhaseCard phase="90" title={days90.title} tasks={days90.tasks} isLast={true} />
+                   <OnboardingPhaseCard phase="30" title={days30.title || 'Start'} tasks={Array.isArray(days30.tasks) ? days30.tasks : []} />
+                   <OnboardingPhaseCard phase="60" title={days60.title || 'Ramp Up'} tasks={Array.isArray(days60.tasks) ? days60.tasks : []} />
+                   <OnboardingPhaseCard phase="90" title={days90.title || 'Contribution'} tasks={Array.isArray(days90.tasks) ? days90.tasks : []} isLast={true} />
                 </div>
             </section>
         </div>

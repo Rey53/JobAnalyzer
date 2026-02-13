@@ -85,7 +85,7 @@ export const CVAnalysisTab: React.FC<TabProps> = ({ data, forceUnlock = false })
                         Key Competitive Strengths
                     </h3>
                     <ul className="space-y-3">
-                        {data.cvEvaluation.strengths?.map((item, index) => (
+                        {(Array.isArray(data.cvEvaluation.strengths) ? data.cvEvaluation.strengths : []).map((item, index) => (
                             <li key={index} className="flex items-start gap-3 text-sm text-gray-700 bg-green-50 p-3 rounded-lg">
                                 <span className="font-bold text-green-600 min-w-[20px]">{index + 1}.</span>
                                 {item}
@@ -101,7 +101,7 @@ export const CVAnalysisTab: React.FC<TabProps> = ({ data, forceUnlock = false })
                         Critical Gaps & Risks
                     </h3>
                     <ul className="space-y-3">
-                        {data.cvEvaluation.weaknesses?.map((item, index) => (
+                        {(Array.isArray(data.cvEvaluation.weaknesses) ? data.cvEvaluation.weaknesses : []).map((item, index) => (
                             <li key={index} className="flex items-start gap-3 text-sm text-gray-700 bg-red-50 p-3 rounded-lg">
                                 <span className="font-bold text-red-600 min-w-[20px]">{index + 1}.</span>
                                 {item}
@@ -118,7 +118,7 @@ export const CVAnalysisTab: React.FC<TabProps> = ({ data, forceUnlock = false })
                     Strategic Improvement Plan
                 </h3>
                 <div className="grid gap-4">
-                    {data.cvEvaluation.improvementPlan?.map((item, index) => (
+                    {(Array.isArray(data.cvEvaluation.improvementPlan) ? data.cvEvaluation.improvementPlan : []).map((item, index) => (
                         <div key={index} className="bg-white p-4 rounded-lg shadow-sm border border-blue-100 flex items-start gap-4 hover:shadow-md transition-shadow">
                              <div className="bg-blue-100 text-blue-700 font-black w-8 h-8 rounded-full flex items-center justify-center shrink-0">
                                 {index + 1}
