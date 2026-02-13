@@ -27,15 +27,26 @@ const TooltipInfo: React.FC<{ text: string }> = ({ text }) => (
 );
 
 export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
-    const { groundingSources } = data.companyIntelligence;
+    // Defensive coding: Ensure data objects exist before access
+    const company = data?.companyIntelligence || {};
+    const commute = data?.commuteAnalysis || {};
+    const living = data?.costOfLiving || {};
+    const salary = data?.salaryBreakdown || {};
+    const recs = data?.recommendations || {};
+    const ranges = company?.salaryRanges || {};
+
+    const groundingSources = company.groundingSources || [];
     const [strategy, setStrategy] = useState<'COMMUTE' | 'RELOCATE'>('COMMUTE');
 
     const annualStrategyCost = strategy === 'COMMUTE' 
-        ? data.commuteAnalysis.annualCost 
-        : data.costOfLiving.totalMonthly * 12;
+        ? (commute.annualCost || 0)
+        : ((living.totalMonthly || 0) * 12);
 
-    const netEffectiveSalary = data.salaryBreakdown.yearly - annualStrategyCost;
+    const netEffectiveSalary = (salary.yearly || 0) - annualStrategyCost;
     const monthlyNet = netEffectiveSalary / 12;
+
+    const ratingString = company.rating ? String(company.rating) : 'N/A';
+    const isTier1 = ratingString.includes('1') || ratingString.toLowerCase().includes('tier 1');
 
     return (
         <div className="space-y-8">
@@ -43,7 +54,7 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
             <div className="bg-white border text-center p-6 rounded-2xl shadow-sm">
                 <h2 className="text-2xl font-black text-slate-800 mb-2">Scenario Planner</h2>
                 <p className="text-slate-500 max-w-2xl mx-auto mb-6">
-                    Compare the financial impact of <strong>Commuting Daily</strong> vs. <strong>Relocating</strong> to {data.commuteAnalysis.to}. 
+                    Compare the financial impact of <strong>Commuting Daily</strong> vs. <strong>Relocating</strong> to {commute.to || 'Work Location'}. 
                     Select a strategy below to update your Net Income projection.
                 </p>
 
@@ -93,23 +104,23 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
             <section className="bg-slate-50 rounded-xl p-6 border-2 border-slate-200">
                 <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <Building2 className="w-6 h-6 text-slate-600" />
-                    {data.companyIntelligence.name} - Company Intelligence
+                    {company.name || 'Company'} - Company Intelligence
                     <TooltipInfo text="AI-generated estimates based on web searches, public company data, and Glassdoor." />
                 </h3>
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <StatCard label="Recent Earnings" value={data.companyIntelligence.earnings} valueColor="text-green-700" />
-                    <StatCard label="Growth Rate" value={data.companyIntelligence.growth} valueColor="text-blue-700" />
-                    <StatCard label="Employee Rating" value={data.companyIntelligence.rating} valueColor="text-purple-700" />
+                    <StatCard label="Recent Earnings" value={company.earnings || 'N/A'} valueColor="text-green-700" />
+                    <StatCard label="Growth Rate" value={company.growth || 'N/A'} valueColor="text-blue-700" />
+                    <StatCard label="Employee Rating" value={company.rating || 'N/A'} valueColor="text-purple-700" />
                     <StatCard label="Benefits Package">
-                         <div className="text-xs font-medium text-gray-700 mt-1 h-full">{data.companyIntelligence.benefits}</div>
+                         <div className="text-xs font-medium text-gray-700 mt-1 h-full">{company.benefits || 'N/A'}</div>
                     </StatCard>
                 </div>
                 <div className="mt-4 bg-white rounded-lg p-4 shadow border border-slate-100">
                     <div className="font-semibold text-gray-800 mb-2">Estimated PR Salary Ranges:</div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                        <div><span className="text-gray-600">Junior:</span> <span className="font-bold">{data.companyIntelligence.salaryRanges.junior}</span></div>
-                        <div><span className="text-gray-600">Mid-Level:</span> <span className="font-bold">{data.companyIntelligence.salaryRanges.mid}</span></div>
-                        <div><span className="text-gray-600">Senior:</span> <span className="font-bold">{data.companyIntelligence.salaryRanges.senior}</span></div>
+                        <div><span className="text-gray-600">Junior:</span> <span className="font-bold">{ranges.junior || 'N/A'}</span></div>
+                        <div><span className="text-gray-600">Mid-Level:</span> <span className="font-bold">{ranges.mid || 'N/A'}</span></div>
+                        <div><span className="text-gray-600">Senior:</span> <span className="font-bold">{ranges.senior || 'N/A'}</span></div>
                     </div>
                 </div>
                  {groundingSources && groundingSources.length > 0 && (
@@ -118,10 +129,10 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
                            <Globe className="w-4 h-4 text-gray-600"/> Powered by Google Search
                         </h4>
                         <ul className="space-y-1 text-xs">
-                           {groundingSources.map(source => (
-                               <li key={source.uri}>
+                           {groundingSources.map((source, idx) => (
+                               <li key={source.uri || idx}>
                                    <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate block">
-                                       {source.title}
+                                       {source.title || source.uri}
                                    </a>
                                </li>
                            ))}
@@ -134,40 +145,40 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
             <section className={`bg-gradient-to-r from-green-50 to-teal-50 rounded-xl p-6 border-2 border-green-200 transition-all duration-500 ${strategy === 'RELOCATE' ? 'opacity-50 grayscale' : 'opacity-100'}`}>
                  <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <Car className="w-6 h-6 text-green-600" />
-                    Commute Cost Analysis: {data.commuteAnalysis.from} → {data.commuteAnalysis.to}
+                    Commute Cost Analysis: {commute.from || '?'} → {commute.to || '?'}
                     {strategy === 'RELOCATE' && <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded ml-2 font-bold uppercase">Inactive Scenario</span>}
                     <TooltipInfo text="Estimates based on mapping APIs and real-time fuel price data." />
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <StatCard label="Distance" faded={strategy === 'RELOCATE'}>
                         <div className="flex flex-col">
-                            <div className="text-lg font-bold text-gray-800">{data.commuteAnalysis.distanceMiles} <span className="text-[10px] text-gray-400 uppercase font-normal text-xs">mi (One Way)</span></div>
-                            <div className="text-lg font-bold text-blue-700">{data.commuteAnalysis.roundTripDistanceMiles} <span className="text-[10px] text-blue-400 uppercase font-normal text-xs">mi (Round Trip)</span></div>
+                            <div className="text-lg font-bold text-gray-800">{commute.distanceMiles || '0'} <span className="text-[10px] text-gray-400 uppercase font-normal text-xs">mi (One Way)</span></div>
+                            <div className="text-lg font-bold text-blue-700">{commute.roundTripDistanceMiles || '0'} <span className="text-[10px] text-blue-400 uppercase font-normal text-xs">mi (Round Trip)</span></div>
                         </div>
                     </StatCard>
                     <StatCard label="Commute Time" faded={strategy === 'RELOCATE'}>
                         <div className="flex flex-col">
-                            <div className="text-lg font-bold text-gray-800">{data.commuteAnalysis.time} <span className="text-[10px] text-gray-400 uppercase font-normal">One Way</span></div>
-                            <div className="text-lg font-bold text-blue-700">{data.commuteAnalysis.roundTripTime} <span className="text-[10px] text-blue-400 uppercase font-normal">Round Trip</span></div>
+                            <div className="text-lg font-bold text-gray-800">{commute.time || '0 min'} <span className="text-[10px] text-gray-400 uppercase font-normal">One Way</span></div>
+                            <div className="text-lg font-bold text-blue-700">{commute.roundTripTime || '0 min'} <span className="text-[10px] text-blue-400 uppercase font-normal">Round Trip</span></div>
                         </div>
                     </StatCard>
                     <StatCard 
                         label="Monthly Gas" 
-                        value={currencyFormatter.format(data.commuteAnalysis.monthlyGas)} 
+                        value={currencyFormatter.format(commute.monthlyGas || 0)} 
                         valueColor="text-orange-700" 
-                        subtext={`@ ${data.commuteAnalysis.gasPricePerLiter}/L (Round Trip)`}
+                        subtext={`@ ${commute.gasPricePerLiter || 0}/L (Round Trip)`}
                         faded={strategy === 'RELOCATE'}
                     />
                     <StatCard 
                         label="Monthly Tolls" 
-                        value={currencyFormatter.format(data.commuteAnalysis.monthlyTolls)} 
+                        value={currencyFormatter.format(commute.monthlyTolls || 0)} 
                         valueColor="text-blue-700" 
-                        subtext={data.commuteAnalysis.tollRateBasis}
+                        subtext={commute.tollRateBasis || 'Estimate'}
                         faded={strategy === 'RELOCATE'}
                     />
                      <div className={`bg-gradient-to-br from-red-100 to-orange-100 rounded-lg p-4 border-2 border-red-300 shadow transition-opacity duration-300 ${strategy === 'RELOCATE' ? 'opacity-40' : 'opacity-100'}`}>
                         <div className="text-sm text-gray-700 font-semibold">Annual Commute</div>
-                        <div className="text-2xl font-bold text-red-700">{currencyFormatter.format(data.commuteAnalysis.annualCost)}</div>
+                        <div className="text-2xl font-bold text-red-700">{currencyFormatter.format(commute.annualCost || 0)}</div>
                     </div>
                 </div>
             </section>
@@ -176,19 +187,19 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
             <section className={`bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200 transition-all duration-500 ${strategy === 'COMMUTE' ? 'opacity-50 grayscale' : 'opacity-100'}`}>
                 <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <Home className="w-6 h-6 text-purple-600" />
-                    Monthly Living Costs in {data.commuteAnalysis.to}
+                    Monthly Living Costs in {commute.to || 'Area'}
                     {strategy === 'COMMUTE' && <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded ml-2 font-bold uppercase">Inactive Scenario</span>}
                     <TooltipInfo text="Estimates based on public cost of living data for the specified municipality." />
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                     <StatCard label="Housing" value={currencyFormatter.format(data.costOfLiving.housing)} faded={strategy === 'COMMUTE'}/>
-                     <StatCard label="Utilities" value={currencyFormatter.format(data.costOfLiving.utilities)} faded={strategy === 'COMMUTE'}/>
-                     <StatCard label="Meals" value={currencyFormatter.format(data.costOfLiving.meals)} faded={strategy === 'COMMUTE'}/>
-                     <StatCard label="Healthcare" value={currencyFormatter.format(data.costOfLiving.healthcare)} faded={strategy === 'COMMUTE'}/>
-                     <StatCard label="Misc" value={currencyFormatter.format(data.costOfLiving.misc)} faded={strategy === 'COMMUTE'}/>
+                     <StatCard label="Housing" value={currencyFormatter.format(living.housing || 0)} faded={strategy === 'COMMUTE'}/>
+                     <StatCard label="Utilities" value={currencyFormatter.format(living.utilities || 0)} faded={strategy === 'COMMUTE'}/>
+                     <StatCard label="Meals" value={currencyFormatter.format(living.meals || 0)} faded={strategy === 'COMMUTE'}/>
+                     <StatCard label="Healthcare" value={currencyFormatter.format(living.healthcare || 0)} faded={strategy === 'COMMUTE'}/>
+                     <StatCard label="Misc" value={currencyFormatter.format(living.misc || 0)} faded={strategy === 'COMMUTE'}/>
                      <div className={`bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg p-4 border-2 border-purple-300 shadow transition-opacity duration-300 ${strategy === 'COMMUTE' ? 'opacity-40' : 'opacity-100'}`}>
                         <div className="text-sm text-gray-700 font-semibold">Total/Month</div>
-                        <div className="text-xl font-bold text-purple-700">{currencyFormatter.format(data.costOfLiving.totalMonthly)}</div>
+                        <div className="text-xl font-bold text-purple-700">{currencyFormatter.format(living.totalMonthly || 0)}</div>
                     </div>
                 </div>
             </section>
@@ -215,7 +226,7 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
                             <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
                                 <span className="text-xs font-bold text-yellow-500 uppercase">Expert Recruiter insight</span>
                                 <p className="text-xs text-slate-400 mt-1">
-                                    "A base salary of {currencyFormatter.format(data.salaryBreakdown.yearly)} today has ~12% less purchasing power than 24 months ago due to regional cost-of-living spikes. Adjusting to the 'Ideal Target' ensures long-term retention."
+                                    "A base salary of {currencyFormatter.format(salary.yearly || 0)} today has ~12% less purchasing power than 24 months ago due to regional cost-of-living spikes. Adjusting to the 'Ideal Target' ensures long-term retention."
                                 </p>
                             </div>
                         </div>
@@ -225,15 +236,15 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between bg-slate-800/50 p-3 rounded border border-slate-700/50">
                                     <div className="text-sm">Technical Fit Score</div>
-                                    <div className="text-xl font-black text-green-400">{data.recommendations.candidateFitScore.score}/10</div>
+                                    <div className="text-xl font-black text-green-400">{recs.candidateFitScore?.score || 0}/10</div>
                                 </div>
                                 <p className="text-xs text-slate-400 italic">
-                                    Score based on: CV matching against Tier {data.companyIntelligence.rating.includes('1') ? '1' : '2'} expectations, GAMP5/Compliance expertise, and site-specific operational knowledge.
+                                    Score based on: CV matching against Tier {isTier1 ? '1' : '2'} expectations, GAMP5/Compliance expertise, and site-specific operational knowledge.
                                 </p>
                                 <div className="flex flex-col gap-1">
                                     <div className="text-xs font-bold uppercase text-slate-500">Recruiter Verdict:</div>
                                     <p className="text-sm text-white font-medium leading-snug">
-                                        {data.recommendations.candidateFitScore.summary}
+                                        {recs.candidateFitScore?.summary || 'N/A'}
                                     </p>
                                 </div>
                             </div>
