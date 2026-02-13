@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { Moon, Sun } from "lucide-react";
 import { GoogleGenAI, Type } from "@google/genai";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -12,6 +13,7 @@ import { InstructionsView } from "./components/tabs/InstructionsView";
 import type { FormData, AnalysisData } from "./types";
 import { AppState, ActiveTab } from "./types";
 import { isAuthenticated, enforceAuthentication } from "./utils/auth";
+import { getDistance, calculateCommuteCosts, BENCHMARKS } from "./utils/prData";
 
 // This is a simplified utility for converting a File to a base64 string
 const fileToBase64 = (file: File): Promise<string> =>
@@ -32,6 +34,10 @@ export default function App() {
   const [appState, setAppState] = useState<AppState>(AppState.INITIAL);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
 
   // Security: Check authentication on mount and enforce it
   useEffect(() => {
@@ -60,6 +66,20 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Dark mode persistence
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
   const handleLoginSuccess = () => {
     setIsLoggedIn(true);
   };
@@ -83,6 +103,9 @@ export default function App() {
       setAppState(AppState.ERROR);
       return;
     }
+    // Verified available models from the API list. Using 'models/' prefix to be explicit.
+    const models = ["models/gemini-2.0-flash", "models/gemini-2.5-flash", "models/gemini-flash-latest", "models/gemini-pro-latest"];
+    let lastError = "";
 
     try {
       const ai = new GoogleGenAI({
@@ -140,9 +163,39 @@ export default function App() {
                 - **Candidate Fit Score (0-10)**: Rigorous assessment of CV vs. Pharma Tier expectations. Deduct if missing GAMP5 for Senior roles. ${jdBase64 ? "Specifically score against the requirements in the uploaded Job Description." : ""}
             5.  **Compensation Structure**: W2 Breakdown + Equivalent 1099 and Form 480 (PR Services) salaries. Explain the 4% tax benefit under Act 60 if applicable for professional services.
             6.  **Onboarding Plan**: A technical 30-60-90 day plan focused on GMP training, site-specific safety, and validation compliance.
-            7.  **CV Evaluation (Expert Critique)**: Compare the provided CV against the ${jdBase64 ? "Uploaded Job Description" : "Job Title and Industry Standards"}. Identify 3-5 key Strengths, 3-5 Critical Weaknesses/Gaps, and a concrete Improvement Plan to increase their chances. ${jdBase64 ? "Recommend specific information to reinforce or skills to learn based on the JD gaps." : ""}
+            7.  **CV Evaluation (Expert Critique)**: 
+                ${jdBase64 ? `CRITICAL: You have access to the full Job Description. Perform a LINE-BY-LINE comparison between the CV and JD. For each requirement in the JD, assess if the candidate's CV demonstrates that skill/qualification.` : `Compare the CV against industry standards for ${formData.jobTitle} positions.`}
+                
+                Provide:
+                - **Overall Match Percentage (0-100)**: How well does the CV align with the ${jdBase64 ? "Job Description" : "role requirements"}?
+                - **3-5 Key Strengths**: Specific accomplishments, certifications, or experiences that make the candidate competitive.
+                - **3-5 Critical Weaknesses/Gaps**: Missing skills, certifications, or experiences that could disqualify them or weaken their application.
+                - **Skill Gaps (Detailed)**: For EACH gap, provide:
+                    * Skill name (e.g., "GAMP 5 CSV Expertise", "FDA 21 CFR Part 11 Knowledge")
+                    * Priority: Critical/High/Medium
+                    * Current level (e.g., "Not Mentioned", "Basic", "Intermediate")
+                    * Required level (e.g., "Expert", "Certified", "5+ years")
+                    * Learning path: Step-by-step plan with specific courses/certs
+                - **Learning Resources**: For top 5 skill gaps, provide SPECIFIC resources:
+                    * Title (e.g., "GAMP 5 Certification Course")
+                    * Type (Course, Certification, Book, Workshop, Webinar)
+                    * Provider (e.g., "ISPE", "Udemy", "LinkedIn Learning", "PDA")
+                    * Duration (e.g., "40 hours", "3 months")
+                    * Cost estimate (e.g., "$500", "Free", "$1,200")
+                    * URL (if available, or "Search: [exact search term]")
+                - **Improvement Plan**: 5-7 actionable steps ranked by impact, with timelines (e.g., "Week 1-2: Complete GAMP 5 fundamentals", "Month 2: Obtain CSV certification")
+                - **Timeline**: Realistic estimate for how long it will take to become fully qualified (e.g., "3-6 months with focused effort")
 
             Return all information as a single JSON object matching the provided schema.
+
+            Return all information as a single JSON object matching the provided schema.
+            **MANDATORY**: Even if exact data is missing, provide your BEST PROFESSIONAL ESTIMATE for PR-specific commute distances, times, and costs. DO NOT RETURN 0 or N/A for distance or monthly costs if you can estimate based on PR geography.
+            
+            **COMPANY INTELLIGENCE REQUIREMENTS**: You MUST search the web and provide:
+            - Recent Earnings: Latest quarterly or annual revenue (with year/quarter, e.g., "Q4 2024: $9.1B")
+            - Growth Rate: Expansion plans, new facilities, job creation announcements, or revenue growth %
+            - Benefits Package: Healthcare, PTO, 401k details, or "Competitive Tier 1 package" if specifics unavailable
+            - DO NOT return "N/A" for these fields unless the company truly doesn't exist. For major pharma companies, data is always available.
             `;
 
       const responseSchema = {
@@ -291,12 +344,41 @@ export default function App() {
           cvEvaluation: {
             type: Type.OBJECT,
             properties: {
+              overallMatch: { type: Type.NUMBER },
               strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
               weaknesses: { type: Type.ARRAY, items: { type: Type.STRING } },
+              skillGaps: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    skill: { type: Type.STRING },
+                    priority: { type: Type.STRING },
+                    currentLevel: { type: Type.STRING },
+                    requiredLevel: { type: Type.STRING },
+                    learningPath: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  },
+                },
+              },
+              learningResources: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING },
+                    type: { type: Type.STRING },
+                    provider: { type: Type.STRING },
+                    duration: { type: Type.STRING },
+                    cost: { type: Type.STRING },
+                    url: { type: Type.STRING },
+                  },
+                },
+              },
               improvementPlan: {
                 type: Type.ARRAY,
                 items: { type: Type.STRING },
               },
+              timeline: { type: Type.STRING },
             },
           },
         },
@@ -324,7 +406,6 @@ export default function App() {
 
       // Retry logic for API calls with model fallback
       let response: any;
-      const models = ["models/gemini-2.0-flash", "models/gemini-1.5-flash", "models/gemini-1.5-pro"];
       let modelIndex = 0;
       let success = false;
 
@@ -332,25 +413,23 @@ export default function App() {
         const currentModel = models[modelIndex];
         try {
           console.log(`Attempting analysis with model: ${currentModel}`);
-          response = await ai.models.generateContent({
+          const modelRef = ai.models.generateContent({
             model: currentModel,
             contents: { parts: parts },
             config: {
               responseMimeType: "application/json",
               responseSchema: responseSchema,
+              tools: [{ googleSearch: {} }] as any,
             },
           });
-          success = true; // Success, exit loop
+          response = await modelRef;
+          success = true;
         } catch (apiError: any) {
-          console.warn(`Failed with model ${currentModel}:`, apiError);
-          const errorMessage = String(apiError);
-          
-          // If it's a rate limit, wait and retry the SAME model (optional, but keep simple for now)
-          // For now, simpler logic: if 404 (Not Found) or 400 (Bad Request), try next model.
-          // If 429 (Rate Limit), we might want to wait, but let's just move to next model to be aggressive.
+          lastError = apiError.message || (typeof apiError === 'object' ? JSON.stringify(apiError) : String(apiError));
+          console.error(`Error with model ${currentModel}:`, lastError);
           
           if (modelIndex === models.length - 1) {
-             throw apiError; // Throw the error if it was the last model
+            throw apiError;
           }
           modelIndex++;
         }
@@ -386,13 +465,216 @@ export default function App() {
 
         // Deduplicate sources based on URI
         const uniqueSources = Array.from(
-          new Map(sources.map((item) => [item["uri"], item])).values(),
+          new Map(sources.map((item: any) => [item["uri"], item])).values(),
         );
 
         if (uniqueSources.length > 0) {
           parsedData.companyIntelligence.groundingSources = uniqueSources;
         }
       }
+
+      // --- Puerto Rico Specific Robustness Layer ---
+      // Initialize missing data structures to prevent undefined errors
+      if (!parsedData.commuteAnalysis) {
+          parsedData.commuteAnalysis = {
+              from: formData.livingIn,
+              to: formData.workingIn,
+              distanceMiles: "0",
+              roundTripDistanceMiles: "0",
+              time: "0 min",
+              roundTripTime: "0 min",
+              monthlyGas: 0,
+              monthlyTolls: 0,
+              annualCost: 0,
+              gasPricePerLiter: BENCHMARKS.gasPricePerLiter,
+              tollRateBasis: "Estimate"
+          };
+      }
+
+      if (!parsedData.costOfLiving) {
+          parsedData.costOfLiving = {
+              location: formData.workingIn,
+              housing: 0,
+              utilities: 0,
+              meals: 0,
+              healthcare: 0,
+              misc: 0,
+              totalMonthly: 0
+          };
+      }
+
+      if (!parsedData.compensationComparison) {
+          parsedData.compensationComparison = {
+              w2Salary: 0,
+              equivalent1099Salary: 0,
+              equivalent480Salary: 0,
+              explanation1099: {
+                  selfEmploymentTax: "N/A",
+                  benefitsCost: "N/A",
+                  totalDifference: "N/A"
+              },
+              explanation480: {
+                  taxWithholding: "N/A",
+                  benefitsCost: "N/A",
+                  totalDifference: "N/A"
+              }
+          };
+      }
+
+      if (!parsedData.recommendations) {
+          parsedData.recommendations = {
+              minTargetSalary: 0,
+              idealSalary: 0,
+              idealW2: 0,
+              ideal1099: 0,
+              ideal480: 0,
+              qualityOfLifeScore: 0,
+              negotiationStrategies: [],
+              candidateFitScore: {
+                  score: 0,
+                  summary: "N/A"
+              }
+          };
+      }
+
+      // Fallback for Company Intelligence if AI returns N/A
+      if (!parsedData.companyIntelligence || parsedData.companyIntelligence.earnings === "N/A" || !parsedData.companyIntelligence.earnings) {
+          const companyName = formData.company.toLowerCase();
+          const knownCompanies: Record<string, any> = {
+              'amgen': {
+                  name: 'Amgen',
+                  earnings: 'Q4 2024: $9.1B quarterly revenue (+11% YoY); FY 2024: $33.4B',
+                  growth: 'Massive $650M expansion in Juncos (AML) for new production lines and natural gas power plant (~750 new jobs)',
+                  rating: 'Tier 1 (Market Leader)',
+                  benefits: 'Competitive Tier 1 package: 401k with significant match, comprehensive health/dental (local PR plans), annual bonus (10-15%), and potential stock options/RSUs.'
+              },
+              'pfizer': {
+                  name: 'Pfizer',
+                  earnings: 'Q4 2024: $17.5B revenue; FY 2024: $58.5B',
+                  growth: 'Expanding biomanufacturing in PR; Continued oncology pipeline investments',
+                  rating: 'Tier 1 (Global Leader)',
+                  benefits: 'Comprehensive benefits: Medical, dental, vision (PR plans), 401k match, profit sharing, tuition reimbursement'
+              },
+              'abbvie': {
+                  name: 'AbbVie',
+                  earnings: 'FY 2024: $56.3B revenue (+3.9% YoY)',
+                  growth: 'Strong immunology pipeline; PR operations expanding for key biosimilars',
+                  rating: 'Tier 1 (Top Pharma)',
+                  benefits: 'Top-tier benefits: Health/dental/vision (local), 401k + 6% match, annual incentives, stock purchase plan'
+              },
+              'janssen': {
+                  name: 'Janssen (J&J)',
+                  earnings: 'J&J FY 2024: $85.2B total revenue; Pharma segment: $54.7B',
+                  growth: 'Major investments in PR biologics; Oncology and immunology focus',
+                  rating: 'Tier 1 (J&J Subsidiary)',
+                  benefits: 'Excellent package: Comprehensive health (local PR), 401k match, profit sharing, career development'
+              },
+              'bristol myers squibb': {
+                  name: 'Bristol Myers Squibb',
+                  earnings: 'FY 2024: $45.8B revenue',
+                  growth: 'Biologics expansion in PR; New oncology/immunology products',
+                  rating: 'Tier 1 (Major Pharma)',
+                  benefits: 'Strong benefits: Medical/dental (PR), 401k, performance bonuses, stock options'
+              },
+              'eli lilly': {
+                  name: 'Eli Lilly',
+                  earnings: 'FY 2024: $34.5B revenue (+20% YoY growth from diabetes/obesity pipeline)',
+                  growth: 'PR manufacturing expansion for GLP-1 drugs (Mounjaro/Zepbound)',
+                  rating: 'Tier 1 (Rapid Growth)',
+                  benefits: 'Competitive: Health/dental/vision (PR), 401k match, annual bonuses, R&D incentives'
+              }
+          };
+
+          const match = Object.keys(knownCompanies).find(key => companyName.includes(key));
+          if (match) {
+              parsedData.companyIntelligence = {
+                  ...parsedData.companyIntelligence,
+                  ...knownCompanies[match],
+                  salaryRanges: parsedData.companyIntelligence?.salaryRanges || {
+                      junior: "$65,000 - $78,000",
+                      mid: "$80,000 - $95,000",
+                      senior: "$100,000 - $130,000+"
+                  }
+              };
+          } else {
+              // Generic fallback for unknown companies
+              if (!parsedData.companyIntelligence) {
+                  parsedData.companyIntelligence = {
+                      name: formData.company,
+                      earnings: "Private/Not Disclosed",
+                      growth: "Contact company directly for expansion details",
+                      rating: "Emerging/Regional Player",
+                      benefits: "Standard PR benefits expected (health, PTO, possible 401k)",
+                      salaryRanges: {
+                          junior: "$55,000 - $70,000",
+                          mid: "$70,000 - $90,000",
+                          senior: "$90,000 - $120,000"
+                      }
+                  };
+              }
+          }
+      }
+
+      // If AI failed to provide distance/commute, we use our local PR Distance Matrix
+      if (!parsedData.commuteAnalysis.distanceMiles || parsedData.commuteAnalysis.distanceMiles === "0" || parsedData.commuteAnalysis.distanceMiles === "N/A") {
+          const dist = getDistance(formData.livingIn, formData.workingIn);
+          const costs = calculateCommuteCosts(dist);
+          parsedData.commuteAnalysis.distanceMiles = dist.toString();
+          parsedData.commuteAnalysis.roundTripDistanceMiles = costs.roundTrip.toString();
+          parsedData.commuteAnalysis.monthlyGas = costs.monthlyGas;
+          parsedData.commuteAnalysis.monthlyTolls = costs.monthlyTolls;
+          parsedData.commuteAnalysis.annualCost = costs.annualCost;
+          parsedData.commuteAnalysis.from = formData.livingIn;
+          parsedData.commuteAnalysis.to = formData.workingIn;
+          parsedData.commuteAnalysis.gasPricePerLiter = BENCHMARKS.gasPricePerLiter;
+          if (parsedData.commuteAnalysis.time === "0" || parsedData.commuteAnalysis.time === "0 min" || !parsedData.commuteAnalysis.time) {
+              parsedData.commuteAnalysis.time = `${dist * 2} min`; // Rough estimate
+              parsedData.commuteAnalysis.roundTripTime = `${dist * 4} min`;
+          }
+      }
+
+      // Ensure Cost of Living is filled if zero
+      if (parsedData.costOfLiving.totalMonthly === 0) {
+          parsedData.costOfLiving.housing = parsedData.costOfLiving.housing || 1200;
+          parsedData.costOfLiving.utilities = parsedData.costOfLiving.utilities || 350;
+          parsedData.costOfLiving.meals = parsedData.costOfLiving.meals || 400;
+          parsedData.costOfLiving.healthcare = parsedData.costOfLiving.healthcare || 150;
+          parsedData.costOfLiving.misc = parsedData.costOfLiving.misc || 200;
+          parsedData.costOfLiving.totalMonthly = 
+              parsedData.costOfLiving.housing + 
+              parsedData.costOfLiving.utilities + 
+              parsedData.costOfLiving.meals + 
+              parsedData.costOfLiving.healthcare + 
+              parsedData.costOfLiving.misc;
+      }
+
+      // Ensure Compensation Comparison is filled
+      if (parsedData.compensationComparison.w2Salary === 0) {
+          const base = formData.salary;
+          parsedData.compensationComparison = {
+              w2Salary: base,
+              equivalent1099Salary: Math.round(base * 1.35), // 1099 needs to be ~35% higher in PR
+              equivalent480Salary: Math.round(base * 1.15), // 480 needs to be ~15% higher
+              explanation1099: {
+                  selfEmploymentTax: "15.3% Social Security & Medicare",
+                  benefitsCost: "Full out-of-pocket health & PTO",
+                  totalDifference: "+35% required for parity"
+              },
+              explanation480: {
+                  taxWithholding: "10% Professional Services Withholding",
+                  benefitsCost: "Limited employer benefits",
+                  totalDifference: "+15% suggested for parity"
+              }
+          };
+      }
+
+      // Ensure recommendations are sensible
+      if (parsedData.recommendations.idealW2 === 0) {
+          parsedData.recommendations.idealW2 = Math.round(formData.salary * 1.1);
+          parsedData.recommendations.ideal1099 = Math.round(parsedData.recommendations.idealW2 * 1.35);
+          parsedData.recommendations.ideal480 = Math.round(parsedData.recommendations.idealW2 * 1.15);
+      }
+      // ----------------------------------------------
 
       setAnalysisData(parsedData);
       setAppState(AppState.RESULT);
@@ -406,8 +688,9 @@ export default function App() {
       ) {
         errorMessage =
           "Rate limit reached (Too many requests). Please wait 1-2 minutes and try again. The free tier has a limit of 15 requests per minute.";
-      } else if (errorMessage.includes("404")) {
-        errorMessage = "Model not found. All attempted models (Gemini 2.0 Flash, 1.5 Flash, 1.5 Pro) failed.";
+      }
+      if (errorMessage.includes("404")) {
+        errorMessage = `Model not found or API key restricted. Tried: ${models.join(", ")}. Last error: ${lastError}`;
       }
 
       setError(errorMessage);
@@ -427,47 +710,60 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-gray-800">
-      <div className="container mx-auto p-4 md:p-8">
-        <Header />
+    <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-slate-900 to-black' : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'}`}>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-start mb-4">
+          <Header />
+          <button
+            onClick={toggleDarkMode}
+            className={`p-3 rounded-full shadow-lg transition-all transform hover:scale-110 ${
+              isDarkMode 
+                ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            }`}
+            aria-label="Toggle dark mode"
+          >
+            {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+          </button>
+        </div>
 
         {/* Global Navigation Tabs */}
         {isLoggedIn && (
-          <div className="bg-gray-50 border-x px-8 py-2 flex gap-1">
+          <div className={`flex gap-2 mb-0 p-2 rounded-t-xl shadow-md ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
             <button
               onClick={() => setActiveTab(ActiveTab.ANALYZER)}
-              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.ANALYZER ? "bg-white text-blue-700 shadow-md border-t-2 border-blue-600" : "text-gray-500 hover:text-blue-600"}`}
+              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.ANALYZER ? (isDarkMode ? "bg-gray-900 text-blue-400 shadow-md border-t-2 border-blue-500" : "bg-white text-blue-700 shadow-md border-t-2 border-blue-600") : (isDarkMode ? "text-gray-400 hover:text-blue-400" : "text-gray-500 hover:text-blue-600")}`}
             >
               💼 Opportunity Analyzer
             </button>
             <button
               onClick={() => setActiveTab(ActiveTab.BENCHMARKS)}
-              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.BENCHMARKS ? "bg-white text-blue-700 shadow-md border-t-2 border-blue-600" : "text-gray-500 hover:text-blue-600"}`}
+              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.BENCHMARKS ? (isDarkMode ? "bg-gray-900 text-blue-400 shadow-md border-t-2 border-blue-500" : "bg-white text-blue-700 shadow-md border-t-2 border-blue-600") : (isDarkMode ? "text-gray-400 hover:text-blue-400" : "text-gray-500 hover:text-blue-600")}`}
             >
               💰 Salary Benchmarks
             </button>
             <button
               onClick={() => setActiveTab(ActiveTab.ONBOARDING)}
-              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.ONBOARDING ? "bg-white text-blue-700 shadow-md border-t-2 border-blue-600" : "text-gray-500 hover:text-blue-600"}`}
+              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.ONBOARDING ? (isDarkMode ? "bg-gray-900 text-blue-400 shadow-md border-t-2 border-blue-500" : "bg-white text-blue-700 shadow-md border-t-2 border-blue-600") : (isDarkMode ? "text-gray-400 hover:text-blue-400" : "text-gray-500 hover:text-blue-600")}`}
             >
               📅 Onboarding Plan
             </button>
             <button
               onClick={() => setActiveTab(ActiveTab.INSTRUCTIONS)}
-              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.INSTRUCTIONS ? "bg-white text-blue-700 shadow-md border-t-2 border-blue-600" : "text-gray-500 hover:text-blue-600"}`}
+              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.INSTRUCTIONS ? (isDarkMode ? "bg-gray-900 text-blue-400 shadow-md border-t-2 border-blue-500" : "bg-white text-blue-700 shadow-md border-t-2 border-blue-600") : (isDarkMode ? "text-gray-400 hover:text-blue-400" : "text-gray-500 hover:text-blue-600")}`}
             >
               ❓ Instructions & FAQ
             </button>
             <button
               onClick={() => setActiveTab(ActiveTab.CV_ANALYSIS)}
-              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.CV_ANALYSIS ? "bg-white text-blue-700 shadow-md border-t-2 border-blue-600" : "text-gray-500 hover:text-blue-600"}`}
+              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.CV_ANALYSIS ? (isDarkMode ? "bg-gray-900 text-blue-400 shadow-md border-t-2 border-blue-500" : "bg-white text-blue-700 shadow-md border-t-2 border-blue-600") : (isDarkMode ? "text-gray-400 hover:text-blue-400" : "text-gray-500 hover:text-blue-600")}`}
             >
               🔐 CV Analysis (Expert)
             </button>
           </div>
         )}
 
-        <main className="bg-white rounded-b-2xl shadow-2xl overflow-hidden min-h-[600px]">
+        <main className={`rounded-b-2xl shadow-2xl overflow-hidden min-h-[600px] transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white'}`}>
           {appState === AppState.RESULT && analysisData ? (
             <AnalysisResult
               data={analysisData}

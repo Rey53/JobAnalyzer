@@ -60,6 +60,23 @@ export interface GroundingSource {
     title: string;
 }
 
+export interface SkillGap {
+    skill: string;
+    priority: 'Critical' | 'High' | 'Medium';
+    currentLevel: string;
+    requiredLevel: string;
+    learningPath: string[];
+}
+
+export interface LearningResource {
+    title: string;
+    type: 'Course' | 'Certification' | 'Book' | 'Workshop' | 'Webinar';
+    provider: string;
+    duration: string;
+    cost: string;
+    url?: string;
+}
+
 export interface AnalysisData {
     solicitorName: string;
     inputModality: string;
@@ -122,8 +139,12 @@ export interface AnalysisData {
     compensationComparison: CompensationComparison;
     onboardingPlan: OnboardingPlan;
     cvEvaluation: {
+        overallMatch: number; // Percentage match (0-100)
         strengths: string[];
         weaknesses: string[];
+        skillGaps: SkillGap[];
+        learningResources: LearningResource[];
         improvementPlan: string[];
+        timeline: string; // Estimated time to become job-ready
     };
 }
