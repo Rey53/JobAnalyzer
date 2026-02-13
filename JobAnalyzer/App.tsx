@@ -85,10 +85,14 @@ export default function App() {
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const cvBase64 = await fileToBase64(formData.cvFile);
+            let jdBase64 = null;
+            if (formData.jobDescriptionFile) {
+                jdBase64 = await fileToBase64(formData.jobDescriptionFile);
+            }
 
             const prompt = `
             You are an Expert Pharma Recruiter specializing in the Puerto Rico industrial sector. 
-            Analyze the following job opportunity in Puerto Rico's pharmaceutical sector based on the provided CV and job details. 
+            Analyze the following job opportunity in Puerto Rico's pharmaceutical sector based on the provided CV and Job Description (if provided). 
             Provide a comprehensive, data-driven analysis using your industry-specific Knowledge Base (KB).
 
             **Expert Recruiter Constraints (Hardcoded PR Data):**
@@ -99,6 +103,9 @@ export default function App() {
 
             **Candidate CV:**
             (CV content is provided as a file part)
+
+            ${jdBase64 ? `**Target Job Description:**
+            (Job Description content is provided as a file part)` : ''}
 
             **Job Opportunity Details:**
             - Company: ${formData.company}
@@ -122,9 +129,10 @@ export default function App() {
                     *   **Ideal 1099**: The target equivalent for a contractor.
                     *   **Ideal 480**: The target for professional services (Accounting for PR 480 specific witholdings).
                 - Provide 4 high-impact negotiation strategies (e.g., relocation bonuses, sign-on for GAMP5 expertise).
-                - **Candidate Fit Score (0-10)**: Rigorous assessment of CV vs. Pharma Tier expectations. Deduct if missing GAMP5 for Senior roles.
+                - **Candidate Fit Score (0-10)**: Rigorous assessment of CV vs. Pharma Tier expectations. Deduct if missing GAMP5 for Senior roles. ${jdBase64 ? 'Specifically score against the requirements in the uploaded Job Description.' : ''}
             5.  **Compensation Structure**: W2 Breakdown + Equivalent 1099 and Form 480 (PR Services) salaries. Explain the 4% tax benefit under Act 60 if applicable for professional services.
             6.  **Onboarding Plan**: A technical 30-60-90 day plan focused on GMP training, site-specific safety, and validation compliance.
+            7.  **CV Evaluation (Expert Critique)**: Compare the provided CV against the ${jdBase64 ? 'Uploaded Job Description' : 'Job Title and Industry Standards'}. Identify 3-5 key Strengths, 3-5 Critical Weaknesses/Gaps, and a concrete Improvement Plan to increase their chances. ${jdBase64 ? 'Recommend specific information to reinforce or skills to learn based on the JD gaps.' : ''}
 
             Return all information as a single JSON object matching the provided schema.
             `;
@@ -271,22 +279,43 @@ export default function App() {
                                 }
                             }
                         }
+                    },
+                    cvEvaluation: {
+                        type: Type.OBJECT,
+                        properties: {
+                            strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            weaknesses: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            improvementPlan: { type: Type.ARRAY, items: { type: Type.STRING } }
+                        }
                     }
                 }
             };
             
+            
+            const parts: any[] = [{ text: prompt }];
+
+            // Add CV File
+            parts.push({
+                inlineData: {
+                    data: cvBase64,
+                    mimeType: formData.cvFile.type,
+                }
+            });
+
+            // Add JD File if available
+            if (jdBase64 && formData.jobDescriptionFile) {
+                parts.push({
+                    inlineData: {
+                        data: jdBase64,
+                        mimeType: formData.jobDescriptionFile.type,
+                    }
+                });
+            }
+
             const response = await ai.models.generateContent({
-                model: 'gemini-3-flash-preview',
+                model: 'gemini-2.0-flash-exp',
                 contents: {
-                    parts: [
-                        { text: prompt },
-                        {
-                            inlineData: {
-                                data: cvBase64,
-                                mimeType: formData.cvFile.type,
-                            }
-                        }
-                    ]
+                    parts: parts
                 },
                 config: {
                     responseMimeType: 'application/json',
@@ -377,6 +406,12 @@ export default function App() {
                             className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.INSTRUCTIONS ? 'bg-white text-blue-700 shadow-md border-t-2 border-blue-600' : 'text-gray-500 hover:text-blue-600'}`}
                         >
                             ❓ Instructions & FAQ
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab(ActiveTab.CV_ANALYSIS)}
+                            className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.CV_ANALYSIS ? 'bg-white text-blue-700 shadow-md border-t-2 border-blue-600' : 'text-gray-500 hover:text-blue-600'}`}
+                        >
+                            🔐 CV Analysis (Expert)
                         </button>
                     </div>
                 )}

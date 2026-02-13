@@ -11,6 +11,7 @@ export enum ActiveTab {
     BENCHMARKS = 'BENCHMARKS',
     ONBOARDING = 'ONBOARDING',
     INSTRUCTIONS = 'INSTRUCTIONS',
+    CV_ANALYSIS = 'CV_ANALYSIS',
 }
 
 export interface FormData {
@@ -22,6 +23,7 @@ export interface FormData {
     salary: number;
     modality: string;
     cvFile: File | null;
+    jobDescriptionFile: File | null;
 }
 
 export interface SalaryBenchmark {
@@ -119,4 +121,9 @@ export interface AnalysisData {
     salaryBenchmarks: SalaryBenchmark[];
     compensationComparison: CompensationComparison;
     onboardingPlan: OnboardingPlan;
+    cvEvaluation: {
+        strengths: string[];
+        weaknesses: string[];
+        improvementPlan: string[];
+    };
 }

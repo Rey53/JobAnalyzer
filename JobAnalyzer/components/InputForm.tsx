@@ -40,9 +40,12 @@ export const InputForm: React.FC<InputFormProps> = ({ onAnalyze }) => {
         salary: 70000,
         modality: modalities[0],
         cvFile: null,
+        jobDescriptionFile: null,
     });
     const [fileName, setFileName] = useState<string | null>(null);
+    const [jdFileName, setJdFileName] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const jdFileInputRef = useRef<HTMLInputElement>(null);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -57,11 +60,27 @@ export const InputForm: React.FC<InputFormProps> = ({ onAnalyze }) => {
         }
     };
 
+    const handleJdFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setFormData(prev => ({ ...prev, jobDescriptionFile: file }));
+            setJdFileName(file.name);
+        }
+    };
+
     const handleFileClear = () => {
         setFormData(prev => ({ ...prev, cvFile: null }));
         setFileName(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
+        }
+    };
+
+    const handleJdFileClear = () => {
+        setFormData(prev => ({ ...prev, jobDescriptionFile: null }));
+        setJdFileName(null);
+        if (jdFileInputRef.current) {
+            jdFileInputRef.current.value = "";
         }
     };
     
@@ -203,7 +222,36 @@ export const InputForm: React.FC<InputFormProps> = ({ onAnalyze }) => {
                                 <span className="mt-1 block text-xs text-gray-500">
                                     PDF, DOCX, or TXT
                                 </span>
-                                <input ref={fileInputRef} type="file" name="cvFile" onChange={handleFileChange} className="sr-only" accept=".pdf,.doc,.docx,.txt" required />
+                        <input ref={fileInputRef} type="file" name="cvFile" onChange={handleFileChange} className="hidden" accept=".pdf,.doc,.docx,.txt" required />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload Job Description (Optional but Recommended)</label>
+                        {jdFileName ? (
+                             <div className="flex items-center justify-between bg-white p-3 border border-gray-300 rounded-md shadow-sm">
+                                <div className="flex items-center gap-3">
+                                    <FileText className="w-6 h-6 text-indigo-600"/>
+                                    <span className="font-medium text-gray-700">{jdFileName}</span>
+                                </div>
+                                <button type="button" onClick={handleJdFileClear} className="text-gray-500 hover:text-red-600">
+                                    <X className="w-5 h-5"/>
+                                </button>
+                            </div>
+                        ) : (
+                            <div 
+                                className="relative block w-full border-2 border-gray-300 border-dashed rounded-lg p-8 text-center hover:border-indigo-400 cursor-pointer bg-slate-50/50"
+                                onClick={() => jdFileInputRef.current?.click()}
+                            >
+                                <UploadCloud className="mx-auto h-12 w-12 text-gray-400" />
+                                <span className="mt-2 block text-sm font-medium text-gray-900">
+                                    Click to upload Job Description
+                                </span>
+                                <span className="mt-1 block text-xs text-gray-500">
+                                    PDF, DOCX, or TXT
+                                </span>
+                                <input ref={jdFileInputRef} type="file" name="jobDescriptionFile" onChange={handleJdFileChange} className="hidden" accept=".pdf,.doc,.docx,.txt" />
                             </div>
                         )}
                     </div>
