@@ -12,21 +12,21 @@ interface InputFormProps {
 }
 
 const SelectInput: React.FC<{ label: string; name: string; value: string; onChange: (e: ChangeEvent<HTMLSelectElement>) => void; options: string[]; isDarkMode?: boolean }> = ({ label, name, value, onChange, options, isDarkMode = false }) => (
-    <div>
-        <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
-        <select name={name} value={value} onChange={onChange} className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${isDarkMode ? 'bg-gray-800 border-gray-600 text-gray-100' : 'bg-white border-gray-300'}`}>
+    <div className="font-serif">
+        <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{label}</label>
+        <select name={name} value={value} onChange={onChange} className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-serif font-medium ${isDarkMode ? 'bg-slate-100 border-gray-600 text-black' : 'bg-white border-gray-300 text-black'}`}>
             {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
     </div>
 );
 
 const NumberInput: React.FC<{ label: string; name: string; value: number; onChange: (e: ChangeEvent<HTMLInputElement>) => void; isDarkMode?: boolean }> = ({ label, name, value, onChange, isDarkMode = false }) => (
-    <div>
-        <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{label}</label>
+    <div className="font-serif">
+        <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{label}</label>
         <div className="relative">
-            <span className={`absolute inset-y-0 left-0 pl-3 flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>$</span>
-            <input type="number" name={name} value={value} onChange={onChange} className={`w-full pl-7 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${isDarkMode ? 'bg-gray-800 border-gray-600 text-gray-100' : 'bg-white border-gray-300'}`} placeholder="70000" />
-            <span className={`absolute inset-y-0 right-0 pr-3 flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>/ year</span>
+            <span className={`absolute inset-y-0 left-0 pl-3 flex items-center font-bold ${isDarkMode ? 'text-gray-900' : 'text-gray-500'}`}>$</span>
+            <input type="number" name={name} value={value} onChange={onChange} className={`w-full pl-7 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-serif font-medium ${isDarkMode ? 'bg-slate-100 border-gray-600 text-black' : 'bg-white border-gray-300 text-black'}`} placeholder="70000" />
+            <span className={`absolute inset-y-0 right-0 pr-3 flex items-center font-bold ${isDarkMode ? 'text-gray-900' : 'text-gray-500'}`}>/ year</span>
         </div>
     </div>
 );
@@ -96,14 +96,14 @@ export const InputForm: React.FC<InputFormProps> = ({ onAnalyze, isDarkMode = fa
             <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>Enter Opportunity Details</h2>
             <div className={`rounded-xl p-6 border-2 ${isDarkMode ? 'bg-gray-800/50 border-blue-500' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'}`}>
                 <div className="grid md:grid-cols-2 gap-6">
-                    <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Name of the Solicitor</label>
+                    <div className="md:col-span-2 font-serif">
+                        <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-gray-100' : 'text-gray-700'}`}>Name of the Solicitor</label>
                         <input 
                             type="text" 
                             name="solicitorName" 
                             value={formData.solicitorName} 
                             onChange={handleChange} 
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-serif font-medium ${isDarkMode ? 'bg-slate-100 border-gray-600 text-black' : 'bg-white border-gray-300 text-black'}`}
                             placeholder="e.g. John Doe"
                             required
                         />
@@ -126,11 +126,11 @@ export const InputForm: React.FC<InputFormProps> = ({ onAnalyze, isDarkMode = fa
                         </p>
                     </div>
 
-                    <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Offered Salary (Based on {formData.modality})</label>
+                    <div className="md:col-span-2 font-serif">
+                        <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-gray-100' : 'text-gray-700'}`}>Offered Salary (Based on {formData.modality})</label>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="relative">
-                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                                <span className={`absolute inset-y-0 left-0 pl-3 flex items-center font-bold ${isDarkMode ? 'text-gray-900' : 'text-gray-500'}`}>$</span>
                                 <input 
                                     type="number" 
                                     name="salary" 
@@ -139,13 +139,13 @@ export const InputForm: React.FC<InputFormProps> = ({ onAnalyze, isDarkMode = fa
                                         const annualValue = Number(e.target.value);
                                         setFormData(prev => ({ ...prev, salary: annualValue }));
                                     }}
-                                    className="w-full pl-7 pr-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" 
+                                    className={`w-full pl-7 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-serif font-medium ${isDarkMode ? 'bg-slate-100 border-gray-600 text-black' : 'bg-white border-gray-300 text-black'}`} 
                                     placeholder="70000" 
                                 />
-                                <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 text-sm">/ year</span>
+                                <span className={`absolute inset-y-0 right-0 pr-3 flex items-center font-bold text-sm ${isDarkMode ? 'text-gray-900' : 'text-gray-500'}`}>/ year</span>
                             </div>
                             <div className="relative">
-                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                                <span className={`absolute inset-y-0 left-0 pl-3 flex items-center font-bold ${isDarkMode ? 'text-gray-900' : 'text-gray-500'}`}>$</span>
                                 <input 
                                     type="number" 
                                     value={Math.round((formData.salary / 2080) * 100) / 100}
@@ -154,11 +154,11 @@ export const InputForm: React.FC<InputFormProps> = ({ onAnalyze, isDarkMode = fa
                                         const annualValue = Math.round(hourlyValue * 2080);
                                         setFormData(prev => ({ ...prev, salary: annualValue }));
                                     }}
-                                    className="w-full pl-7 pr-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" 
+                                    className={`w-full pl-7 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-serif font-medium ${isDarkMode ? 'bg-slate-100 border-gray-600 text-black' : 'bg-white border-gray-300 text-black'}`} 
                                     placeholder="33.65" 
                                     step="0.01"
                                 />
-                                <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 text-sm">/ hour</span>
+                                <span className={`absolute inset-y-0 right-0 pr-3 flex items-center font-bold text-sm ${isDarkMode ? 'text-gray-900' : 'text-gray-500'}`}>/ hour</span>
                             </div>
                         </div>
                     </div>

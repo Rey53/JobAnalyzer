@@ -413,7 +413,9 @@ export default function App() {
               tools: [{ googleSearch: {} }] as any,
             },
           });
-          response = await modelRef;
+          const result = await modelRef;
+          // Handle result.response (GenerateContentResult) or direct response (GenerateContentResponse)
+          response = (result as any).response || result;
           success = true;
         } catch (apiError: any) {
           lastError = apiError.message || (typeof apiError === 'object' ? JSON.stringify(apiError) : String(apiError));
@@ -429,7 +431,9 @@ export default function App() {
       // Parse response with robust error handling
       let parsedData: AnalysisData;
       try {
-        const rawText = response.text();
+        // Handle result.response (GenerateContentResult) or direct response (GenerateContentResponse)
+        const responseObj = response.response || response;
+        const rawText = typeof responseObj.text === 'function' ? responseObj.text() : JSON.stringify(responseObj);
         console.log("Raw response length:", rawText.length);
         
         // Sanitize JSON: Remove potential trailing commas and fix common issues

@@ -100,17 +100,17 @@ export const CVAnalysisTab: React.FC<TabProps> = ({ data, forceUnlock = false })
                 </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-6 font-serif">
                 {/* Strengths */}
                 <div className="bg-white p-6 rounded-xl border-t-4 border-green-500 shadow-md">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <h3 className="text-lg font-black text-slate-950 mb-4 flex items-center gap-2">
                         <CheckCircle className="w-5 h-5 text-green-600" />
                         Key Competitive Strengths
                     </h3>
                     <ul className="space-y-3">
                         {(Array.isArray(data.cvEvaluation.strengths) ? data.cvEvaluation.strengths : []).map((item, index) => (
-                            <li key={index} className="flex items-start gap-3 text-sm text-gray-700 bg-green-50 p-3 rounded-lg">
-                                <span className="font-bold text-green-600 min-w-[20px]">{index + 1}.</span>
+                            <li key={index} className="flex items-start gap-3 text-sm font-bold text-slate-900 bg-green-50 p-3 rounded-lg">
+                                <span className="font-black text-green-600 min-w-[20px]">{index + 1}.</span>
                                 {item}
                             </li>
                         ))}
@@ -119,14 +119,14 @@ export const CVAnalysisTab: React.FC<TabProps> = ({ data, forceUnlock = false })
 
                 {/* Weaknesses */}
                 <div className="bg-white p-6 rounded-xl border-t-4 border-red-500 shadow-md">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <h3 className="text-lg font-black text-slate-950 mb-4 flex items-center gap-2">
                         <XCircle className="w-5 h-5 text-red-600" />
                         Critical Gaps & Risks
                     </h3>
                     <ul className="space-y-3">
                         {(Array.isArray(data.cvEvaluation.weaknesses) ? data.cvEvaluation.weaknesses : []).map((item, index) => (
-                            <li key={index} className="flex items-start gap-3 text-sm text-gray-700 bg-red-50 p-3 rounded-lg">
-                                <span className="font-bold text-red-600 min-w-[20px]">{index + 1}.</span>
+                            <li key={index} className="flex items-start gap-3 text-sm font-bold text-slate-900 bg-red-50 p-3 rounded-lg">
+                                <span className="font-black text-red-600 min-w-[20px]">{index + 1}.</span>
                                 {item}
                             </li>
                         ))}
