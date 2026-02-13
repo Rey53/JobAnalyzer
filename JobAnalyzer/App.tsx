@@ -322,39 +322,37 @@ export default function App() {
         });
       }
 
-      // Retry logic for API calls
+      // Retry logic for API calls with model fallback
       let response: any;
-      let retryCount = 0;
-      const maxRetries = 3;
+      const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+      let modelIndex = 0;
+      let success = false;
 
-      while (retryCount < maxRetries) {
+      while (modelIndex < models.length && !success) {
+        const currentModel = models[modelIndex];
         try {
+          console.log(`Attempting analysis with model: ${currentModel}`);
           response = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
+            model: currentModel,
             contents: { parts: parts },
             config: {
               responseMimeType: "application/json",
               responseSchema: responseSchema,
             },
           });
-          break; // Success, exit loop
+          success = true; // Success, exit loop
         } catch (apiError: any) {
+          console.warn(`Failed with model ${currentModel}:`, apiError);
           const errorMessage = String(apiError);
-          if (
-            (errorMessage.includes("429") ||
-              errorMessage.includes("RESOURCE_EXHAUSTED")) &&
-            retryCount < maxRetries - 1
-          ) {
-            console.warn(
-              `Rate limit hit. Retrying in ${(retryCount + 1) * 2} seconds...`,
-            );
-            await new Promise((resolve) =>
-              setTimeout(resolve, (retryCount + 1) * 2000),
-            );
-            retryCount++;
-          } else {
-            throw apiError; // Re-throw other errors or if max retries reached
+          
+          // If it's a rate limit, wait and retry the SAME model (optional, but keep simple for now)
+          // For now, simpler logic: if 404 (Not Found) or 400 (Bad Request), try next model.
+          // If 429 (Rate Limit), we might want to wait, but let's just move to next model to be aggressive.
+          
+          if (modelIndex === models.length - 1) {
+             throw apiError; // Throw the error if it was the last model
           }
+          modelIndex++;
         }
       }
 
@@ -409,8 +407,7 @@ export default function App() {
         errorMessage =
           "Rate limit reached (Too many requests). Please wait 1-2 minutes and try again. The free tier has a limit of 15 requests per minute.";
       } else if (errorMessage.includes("404")) {
-        errorMessage = "Model not found. Retrying with alternative model...";
-        // Logic to switch models could go here, but for now we report it clearly.
+        errorMessage = "Model not found. All attempted models (Gemini 2.0 Flash, 1.5 Flash, 1.5 Pro) failed.";
       }
 
       setError(errorMessage);
