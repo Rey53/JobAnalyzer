@@ -320,7 +320,6 @@ export default function App() {
                 config: {
                     responseMimeType: 'application/json',
                     responseSchema: responseSchema,
-                    tools: [{googleSearch: {}}],
                 },
             });
             
