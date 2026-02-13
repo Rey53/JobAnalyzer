@@ -315,16 +315,33 @@ export default function App() {
                 });
             }
 
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.0-flash',
-                contents: {
-                    parts: parts
-                },
-                config: {
-                    responseMimeType: 'application/json',
-                    responseSchema: responseSchema,
-                },
-            });
+            // Retry logic for API calls
+            let response: any;
+            let retryCount = 0;
+            const maxRetries = 3;
+
+            while (retryCount < maxRetries) {
+                try {
+                    response = await ai.models.generateContent({
+                        model: 'gemini-2.0-flash',
+                        contents: { parts: parts },
+                        config: {
+                            responseMimeType: 'application/json',
+                            responseSchema: responseSchema,
+                        },
+                    });
+                    break; // Success, exit loop
+                } catch (apiError: any) {
+                    const errorMessage = String(apiError);
+                    if ((errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED')) && retryCount < maxRetries - 1) {
+                        console.warn(`Rate limit hit. Retrying in ${(retryCount + 1) * 2} seconds...`);
+                        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 2000));
+                        retryCount++;
+                    } else {
+                        throw apiError; // Re-throw other errors or if max retries reached
+                    }
+                }
+            }
             
             const jsonText = response.text.trim();
             const parsedData = JSON.parse(jsonText);
