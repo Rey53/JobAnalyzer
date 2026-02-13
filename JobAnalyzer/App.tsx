@@ -313,7 +313,7 @@ export default function App() {
             }
 
             const response = await ai.models.generateContent({
-                model: 'gemini-1.5-flash-001',
+                model: 'gemini-2.0-flash',
                 contents: {
                     parts: parts
                 },
