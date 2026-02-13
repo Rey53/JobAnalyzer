@@ -69,9 +69,10 @@ export default function App() {
     setError(null);
     setAnalysisData(null);
 
-    if (!process.env.API_KEY) {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
       setError(
-        "API key is not configured. Please set the API_KEY environment variable.",
+        "API key is not configured. Please set the VITE_GEMINI_API_KEY environment variable.",
       );
       setAppState(AppState.ERROR);
       return;
@@ -85,8 +86,7 @@ export default function App() {
 
     try {
       const ai = new GoogleGenAI({
-        apiKey: process.env.API_KEY,
-        apiVersion: "v1beta",
+        apiKey: apiKey,
       });
       const cvBase64 = await fileToBase64(formData.cvFile);
       let jdBase64 = null;
@@ -324,7 +324,7 @@ export default function App() {
 
       // Retry logic for API calls with model fallback
       let response: any;
-      const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+      const models = ["models/gemini-2.0-flash", "models/gemini-1.5-flash", "models/gemini-1.5-pro"];
       let modelIndex = 0;
       let success = false;
 
