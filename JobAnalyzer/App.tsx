@@ -83,7 +83,10 @@ export default function App() {
         }
         
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = new GoogleGenAI({ 
+                apiKey: process.env.API_KEY,
+                apiVersion: 'v1beta'
+            });
             const cvBase64 = await fileToBase64(formData.cvFile);
             let jdBase64 = null;
             if (formData.jobDescriptionFile) {
@@ -313,7 +316,7 @@ export default function App() {
             }
 
             const response = await ai.models.generateContent({
-                model: 'gemini-2.0-flash',
+                model: 'gemini-1.5-flash',
                 contents: {
                     parts: parts
                 },
@@ -358,7 +361,16 @@ export default function App() {
 
         } catch (e) {
             console.error(e);
-            setError(`An error occurred during analysis. Please check the console for details. Error: ${e instanceof Error ? e.message : String(e)}`);
+            let errorMessage = e instanceof Error ? e.message : String(e);
+            
+            if (errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+                errorMessage = "Rate limit reached (Too many requests). Please wait 1-2 minutes and try again. The free tier has a limit of 15 requests per minute.";
+            } else if (errorMessage.includes('404')) {
+                errorMessage = "Model not found. Retrying with alternative model...";
+                // Logic to switch models could go here, but for now we report it clearly.
+            }
+            
+            setError(errorMessage);
             setAppState(AppState.ERROR);
         }
     }, []);
@@ -442,6 +454,7 @@ export default function App() {
                             {activeTab === ActiveTab.BENCHMARKS && <BenchmarkView />}
                             {activeTab === ActiveTab.ONBOARDING && <OnboardingView />}
                             {activeTab === ActiveTab.INSTRUCTIONS && <InstructionsView />}
+                            {activeTab === ActiveTab.CV_ANALYSIS && <CVAnalysisTab data={analysisData || {} as AnalysisData} />}
                         </>
                     )}
                 </main>
@@ -450,3 +463,5 @@ export default function App() {
         </div>
     );
 }
+
+import { CVAnalysisTab } from './components/tabs/CVAnalysisTab';
