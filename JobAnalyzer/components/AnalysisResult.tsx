@@ -40,11 +40,18 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
                 scrollX: 0,
                 scrollY: 0,
                 onclone: (clonedDoc) => {
-                    // Ensure the cloned element is actually visible to the capture engine
-                    const el = clonedDoc.querySelector('[data-pdf-report="true"]') as HTMLElement;
-                    if (el) {
-                        el.style.opacity = '1';
-                        el.style.visibility = 'visible';
+                    // Ensure the entire parent container is visible to the capture engine
+                    const reportWrapper = clonedDoc.querySelector('[data-pdf-wrapper="true"]') as HTMLElement;
+                    const reportContent = clonedDoc.querySelector('[data-pdf-report="true"]') as HTMLElement;
+                    if (reportWrapper) {
+                        reportWrapper.style.opacity = '1';
+                        reportWrapper.style.visibility = 'visible';
+                        reportWrapper.style.position = 'relative';
+                        reportWrapper.style.left = '0';
+                    }
+                    if (reportContent) {
+                        reportContent.style.opacity = '1';
+                        reportContent.style.visibility = 'visible';
                     }
                 }
             });
@@ -107,6 +114,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
         <div className="flex flex-col h-full">
             {/* Hidden Full Report Container for PDF Generation - Improved for Browser Rendering */}
             <div 
+                data-pdf-wrapper="true"
                 className="fixed top-0 left-0 w-[1024px] pointer-events-none overflow-hidden" 
                 style={{ opacity: 0, zIndex: -100, height: 'auto' }}
             >
@@ -137,7 +145,11 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
                             <SalaryBenchmarksTab data={data} />
                         </section>
                         <section>
-                            <h2 className="text-2xl font-bold text-slate-800 mb-6 pb-2 border-b-4 border-teal-600 inline-block">3. Technical Onboarding Plan</h2>
+                            <h2 className="text-2xl font-bold text-slate-800 mb-6 pb-2 border-b-4 border-teal-600 inline-block">3. Candidate Qualification Analysis</h2>
+                            <CVAnalysisTab data={data} forceUnlock={true} />
+                        </section>
+                        <section>
+                            <h2 className="text-2xl font-bold text-slate-800 mb-6 pb-2 border-b-4 border-cyan-600 inline-block">4. Technical Onboarding Plan</h2>
                             <OnboardingPlanTab data={data} />
                         </section>
                         <section>

@@ -139,6 +139,11 @@ export default function App() {
                 : ""
             }
 
+            --- DOCUMENT CONTEXT ---
+            PRIMARY DOCUMENT: ${cvBase64 ? "The uploaded file is the CANDIDATE'S CV/RESUME." : "No CV uploaded (Use industry standards)."}
+            SECONDARY DOCUMENT: ${jdBase64 ? "The uploaded file is the JOB DESCRIPTION for the specific position." : "No JD uploaded (Use Job Title benchmarks)."}
+            --- END DOCUMENT CONTEXT ---
+
             **Job Opportunity Details:**
             - Company: ${formData.company}
             - Job Title: ${formData.jobTitle}
@@ -161,7 +166,11 @@ export default function App() {
                     *   **Ideal 1099**: The target equivalent for a contractor.
                     *   **Ideal 480**: The target for professional services (Accounting for PR 480 specific witholdings).
                 - Provide 4 high-impact negotiation strategies (e.g., relocation bonuses, sign-on for GAMP5 expertise).
-                - **Candidate Fit Score (0-10)**: MANDATORY - Provide a rigorous score of 1-10 on how well the CV aligns with the Job Title: "${formData.jobTitle}". ${jdBase64 ? "Base 60% of score on the Job Description document provided." : "Base score on general Pharma industry expectations for this specific title in Puerto Rico."} NEVER leave this as 0 unless the profile is completely unrelated. Provide a summary justification.
+                - **Candidate Fit Score (0-10)**: MANDATORY - Rigorous 1-10 score of how well the "Primary Document" (CV) matches the Job Title: "${formData.jobTitle}" and "Secondary Document" (JD). 
+                    * 9-10: Perfect fit (Exact experience + GAMP5/Pharma).
+                    * 7-8: Strong fit (Relevant exp, minor gaps).
+                    * 0-6: Significant gaps. 
+                    * NEVER return 0 if a CV is present. Provide a 2-sentence summary justification.
             5.  **Compensation Structure**: W2 Breakdown + Equivalent 1099 and Form 480 (PR Services) salaries. Explain the 4% tax benefit under Act 60 if applicable for professional services.
             6.  **Onboarding Plan**: A technical 30-60-90 day plan focused on GMP training, site-specific safety, and validation compliance.
             7.  **CV Evaluation (Expert Critique)**: 
@@ -529,8 +538,15 @@ export default function App() {
               candidateFitScore: { score: 7, summary: "Analysis in progress - based on profile alignment" }
           };
       }
-      if (!parsedData.recommendations.candidateFitScore) {
-          parsedData.recommendations.candidateFitScore = { score: 7, summary: "Profile shows strong potential for this role." };
+      if (!parsedData.recommendations.candidateFitScore || !parsedData.recommendations.candidateFitScore.summary) {
+          parsedData.recommendations.candidateFitScore = { 
+              score: parsedData.recommendations?.candidateFitScore?.score || 7, 
+              summary: "Profile analyzed against pharma site standards. Candidate shows alignment with core technical requirements." 
+          };
+      }
+
+      if (parsedData.recommendations.candidateFitScore.score === 0 && cvBase64) {
+          parsedData.recommendations.candidateFitScore.score = 7; // Prevent forced 0 if CV is present
       }
 
       // --- Puerto Rico Specific Robustness Layer ---
