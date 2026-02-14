@@ -472,51 +472,8 @@ export default function App() {
         }
       }
 
-      // Attach input modality and solicitor
-      parsedData.solicitorName = formData.solicitorName;
-      parsedData.inputModality = formData.modality;
-
-      // Calculate salary breakdown
-      parsedData.salaryBreakdown = {
-        yearly: formData.salary,
-        monthly: Math.round(formData.salary / 12),
-        biweekly: Math.round(formData.salary / 26),
-        weekly: Math.round(formData.salary / 52),
-        hourly: Number((formData.salary / 2080).toFixed(2)),
-      };
-
-      // Extract grounding sources
-      const groundingChunks =
-        response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-      if (groundingChunks) {
-        const sources = groundingChunks
-          .map((chunk: any) => chunk.web)
-          .filter((source: any) => source && source.uri && source.title)
-          .map((source: any) => ({ uri: source.uri, title: source.title }));
-
-        // Deduplicate sources based on URI
-        const uniqueSources = Array.from(
-          new Map(sources.map((item: any) => [item["uri"], item])).values(),
-        ) as { uri: string; title: string }[];
-
-        if (uniqueSources.length > 0) {
-          // Initialize companyIntelligence if missing before attaching sources
-          if (!parsedData.companyIntelligence) {
-            parsedData.companyIntelligence = {
-              name: formData.company,
-              earnings: "N/A",
-              growth: "N/A",
-              rating: "N/A",
-              benefits: "N/A",
-              salaryRanges: { junior: "N/A", mid: "N/A", senior: "N/A" }
-            };
-          }
-          parsedData.companyIntelligence.groundingSources = uniqueSources;
-        }
-      }
-
-      // --- Robust Initialization Layer ---
-      // Ensure all major objects exist early to prevent UI crashes/missing sections
+      // --- Robust Initialization Layer (Defense-in-Depth) ---
+      // This MUST run before any other property assignment to ensure valid objects
       if (!parsedData.companyIntelligence) {
           parsedData.companyIntelligence = {
               name: formData.company,
@@ -526,6 +483,8 @@ export default function App() {
               benefits: "N/A",
               salaryRanges: { junior: "N/A", mid: "N/A", senior: "N/A" }
           };
+      } else if (!parsedData.companyIntelligence.salaryRanges) {
+          parsedData.companyIntelligence.salaryRanges = { junior: "N/A", mid: "N/A", senior: "N/A" };
       }
 
       if (!parsedData.cvEvaluation) {
@@ -541,13 +500,12 @@ export default function App() {
       }
       
       // Ensure arrays are initialized even if AI skips them
-      if (!parsedData.cvEvaluation.strengths) parsedData.cvEvaluation.strengths = [];
-      if (!parsedData.cvEvaluation.weaknesses) parsedData.cvEvaluation.weaknesses = [];
-      if (!parsedData.cvEvaluation.skillGaps) parsedData.cvEvaluation.skillGaps = [];
-      if (!parsedData.cvEvaluation.learningResources) parsedData.cvEvaluation.learningResources = [];
-      if (!parsedData.cvEvaluation.improvementPlan) parsedData.cvEvaluation.improvementPlan = [];
+      parsedData.cvEvaluation.strengths = parsedData.cvEvaluation.strengths || [];
+      parsedData.cvEvaluation.weaknesses = parsedData.cvEvaluation.weaknesses || [];
+      parsedData.cvEvaluation.skillGaps = parsedData.cvEvaluation.skillGaps || [];
+      parsedData.cvEvaluation.learningResources = parsedData.cvEvaluation.learningResources || [];
+      parsedData.cvEvaluation.improvementPlan = parsedData.cvEvaluation.improvementPlan || [];
 
-      // Ensure recommendations and fit score exist
       if (!parsedData.recommendations) {
           parsedData.recommendations = {
               minTargetSalary: formData.salary,
@@ -560,9 +518,11 @@ export default function App() {
               candidateFitScore: { score: 7, summary: "Analysis in progress - based on profile alignment" }
           };
       }
+
       if (!parsedData.recommendations.candidateFitScore || !parsedData.recommendations.candidateFitScore.summary) {
+          const prevScore = parsedData.recommendations?.candidateFitScore?.score;
           parsedData.recommendations.candidateFitScore = { 
-              score: parsedData.recommendations?.candidateFitScore?.score || 7, 
+              score: (prevScore !== undefined && prevScore !== 0) ? prevScore : 7, 
               summary: "Profile analyzed against pharma site standards. Candidate shows alignment with core technical requirements." 
           };
       }
@@ -571,8 +531,6 @@ export default function App() {
           parsedData.recommendations.candidateFitScore.score = 7; // Prevent forced 0 if CV is present
       }
 
-      // --- Puerto Rico Specific Robustness Layer ---
-      // Initialize missing data structures to prevent undefined errors
       if (!parsedData.commuteAnalysis) {
           parsedData.commuteAnalysis = {
               from: formData.livingIn,
@@ -619,20 +577,38 @@ export default function App() {
           };
       }
 
-      if (!parsedData.recommendations) {
-          parsedData.recommendations = {
-              minTargetSalary: 0,
-              idealSalary: 0,
-              idealW2: 0,
-              ideal1099: 0,
-              ideal480: 0,
-              qualityOfLifeScore: 0,
-              negotiationStrategies: [],
-              candidateFitScore: {
-                  score: 0,
-                  summary: "N/A"
-              }
-          };
+      // --- END Defense Layer ---
+
+      // Attach input modality and solicitor
+      parsedData.solicitorName = formData.solicitorName;
+      parsedData.inputModality = formData.modality;
+
+      // Calculate salary breakdown
+      parsedData.salaryBreakdown = {
+        yearly: formData.salary,
+        monthly: Math.round(formData.salary / 12),
+        biweekly: Math.round(formData.salary / 26),
+        weekly: Math.round(formData.salary / 52),
+        hourly: Number((formData.salary / 2080).toFixed(2)),
+      };
+
+      // Extract grounding sources
+      const groundingChunks = response.response?.candidates?.[0]?.groundingMetadata?.groundingChunks || 
+                               response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+      
+      if (groundingChunks) {
+        const sources = groundingChunks
+          .map((chunk: any) => chunk.web)
+          .filter((source: any) => source && source.uri && source.title)
+          .map((source: any) => ({ uri: source.uri, title: source.title }));
+
+        if (sources.length > 0) {
+          const uniqueSources = Array.from(
+            new Map(sources.map((item: any) => [item["uri"], item])).values(),
+          ) as { uri: string; title: string }[];
+          
+          parsedData.companyIntelligence.groundingSources = uniqueSources;
+        }
       }
 
       // Fallback for Company Intelligence if AI returns N/A

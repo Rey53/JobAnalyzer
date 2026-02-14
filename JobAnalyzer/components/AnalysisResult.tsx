@@ -108,7 +108,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
         timeStyle: 'medium'
     });
 
-    const reportId = `PP-PR-${data.companyIntelligence.name.substring(0,3).toUpperCase()}-${Date.now().toString().slice(-6)}`;
+    const compName = data?.companyIntelligence?.name || "PHARMA";
+    const reportId = `PP-PR-${compName.substring(0,3).toUpperCase()}-${Date.now().toString().slice(-6)}`;
 
     return (
         <div className="flex flex-col h-full">
@@ -151,10 +152,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
                         <section>
                             <h2 className="text-2xl font-bold text-slate-800 mb-6 pb-2 border-b-4 border-cyan-600 inline-block">4. Technical Onboarding Plan</h2>
                             <OnboardingPlanTab data={data} />
-                        </section>
-                        <section>
-                            <h2 className="text-2xl font-bold text-slate-800 mb-6 pb-2 border-b-4 border-red-600 inline-block">4. Expert CV Critique & Gap Analysis</h2>
-                            <CVAnalysisTab data={data} forceUnlock={true} />
                         </section>
                     </div>
 
