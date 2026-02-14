@@ -500,12 +500,34 @@ export default function App() {
         ) as { uri: string; title: string }[];
 
         if (uniqueSources.length > 0) {
+          // Initialize companyIntelligence if missing before attaching sources
+          if (!parsedData.companyIntelligence) {
+            parsedData.companyIntelligence = {
+              name: formData.company,
+              earnings: "N/A",
+              growth: "N/A",
+              rating: "N/A",
+              benefits: "N/A",
+              salaryRanges: { junior: "N/A", mid: "N/A", senior: "N/A" }
+            };
+          }
           parsedData.companyIntelligence.groundingSources = uniqueSources;
         }
       }
 
       // --- Robust Initialization Layer ---
-      // Ensure all major objects exist to prevent UI crashes/missing sections
+      // Ensure all major objects exist early to prevent UI crashes/missing sections
+      if (!parsedData.companyIntelligence) {
+          parsedData.companyIntelligence = {
+              name: formData.company,
+              earnings: "N/A",
+              growth: "N/A",
+              rating: "N/A",
+              benefits: "N/A",
+              salaryRanges: { junior: "N/A", mid: "N/A", senior: "N/A" }
+          };
+      }
+
       if (!parsedData.cvEvaluation) {
           parsedData.cvEvaluation = {
               overallMatch: 50,
