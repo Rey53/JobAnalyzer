@@ -26,20 +26,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
         setIsDownloading(true);
 
         try {
-            // --- Force Paint Strategy ---
-            const reportContainer = document.getElementById('pdf-report-container');
-            if (reportContainer) {
-                reportContainer.style.position = 'fixed';
-                reportContainer.style.top = '0';
-                reportContainer.style.left = '0';
-                reportContainer.style.width = '1200px';
-                reportContainer.style.height = 'auto';
-                reportContainer.style.visibility = 'visible';
-                reportContainer.style.opacity = '1';
-                reportContainer.style.zIndex = '10000';
-                reportContainer.style.backgroundColor = '#ffffff';
-            }
-
             // Give the container a moment to fully render and paint in the viewport
             await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -54,13 +40,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
                 scrollX: 0,
                 scrollY: 0,
             });
-
-            // Revert original layout immediately
-            if (reportContainer) {
-                reportContainer.style.position = 'absolute';
-                reportContainer.style.left = '-10000px';
-                reportContainer.style.zIndex = '-1';
-            }
             
             const imgData = canvas.toDataURL('image/png');
             // Check if image data is empty (only has header)
@@ -80,7 +59,11 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
             });
 
             pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-            pdf.save(`PharmaPacePR_Full_Report_${data.companyIntelligence.name}.pdf`);
+            const cleanSolicitor = data.solicitorName.replace(/\s+/g, '_');
+            const cleanCompany = data.companyIntelligence.name.replace(/\s+/g, '_');
+            const fileDate = new Date().toISOString().split('T')[0];
+            
+            pdf.save(`PharmaPacePR_Analysis_${cleanCompany}_${cleanSolicitor}_${fileDate}.pdf`);
 
         } catch (error) {
             console.error("Error generating PDF:", error);
@@ -123,8 +106,24 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
             <div 
                 id="pdf-report-container"
                 data-pdf-wrapper="true"
-                className="fixed top-0 left-0 w-[1024px] pointer-events-none overflow-hidden" 
-                style={{ position: 'absolute', left: '-10000px', opacity: 0, zIndex: -100, height: 'auto' }}
+                className="fixed top-0 left-0 w-[1200px] pointer-events-none overflow-hidden" 
+                style={isDownloading ? { 
+                    position: 'fixed', 
+                    top: 0, 
+                    left: 0, 
+                    width: '1200px', 
+                    height: 'auto', 
+                    visibility: 'visible', 
+                    opacity: 1, 
+                    zIndex: 10000, 
+                    backgroundColor: '#ffffff' 
+                } : { 
+                    position: 'absolute', 
+                    left: '-10000px', 
+                    opacity: 0, 
+                    zIndex: -100, 
+                    height: 'auto' 
+                }}
             >
                 <div 
                     ref={fullReportRef} 
