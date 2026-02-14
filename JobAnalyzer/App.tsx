@@ -105,7 +105,7 @@ export default function App() {
       return;
     }
     // Verified available models from the API list. Using 'models/' prefix to be explicit.
-    const models = ["models/gemini-2.0-flash", "models/gemini-1.5-flash", "models/gemini-1.5-flash-8b", "models/gemini-1.5-pro"];
+    const models = ["gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-1.5-pro-latest", "gemini-1.5-pro", "gemini-flash-latest", "gemini-pro-latest"];
     let lastError = "";
 
     try {
