@@ -104,7 +104,7 @@ export default function App() {
       return;
     }
     // Verified available models from the API list. Using 'models/' prefix to be explicit.
-    const models = ["models/gemini-2.0-flash", "models/gemini-2.5-flash", "models/gemini-flash-latest", "models/gemini-pro-latest"];
+    const models = ["models/gemini-2.0-flash", "models/gemini-1.5-flash", "models/gemini-1.5-flash-8b", "models/gemini-1.5-pro"];
     let lastError = "";
 
     try {
@@ -164,18 +164,16 @@ export default function App() {
             5.  **Compensation Structure**: W2 Breakdown + Equivalent 1099 and Form 480 (PR Services) salaries. Explain the 4% tax benefit under Act 60 if applicable for professional services.
             6.  **Onboarding Plan**: A technical 30-60-90 day plan focused on GMP training, site-specific safety, and validation compliance.
             7.  **CV Evaluation (Expert Critique)**: 
-                ${jdBase64 ? `Compare the CV line-by-line against the Job Description.` : `Compare the CV against ${formData.jobTitle} industry standards.`}
+                ${jdBase64 ? `Perform a line-by-line comparison between the primary CV and the secondary document provided (which may be a Job Description or another CV). Identify gaps, strengths, and alignment.` : `Compare the CV against ${formData.jobTitle} pharmaceutical industry standards in Puerto Rico.`}
                 
                 Provide:
-                - **Overall Match (%)**:  How well the CV aligns (0-100).
-                - **3-5 Strengths**: Key competitive advantages.
-                - **3-5 Weaknesses**: Critical missing elements.
-                - **Top 3 Skill Gaps ONLY**: For each, provide:
-                    * Skill, Priority (Critical/High/Medium), Current vs Required level
-                    * 2-3 step learning path
-                - **Top 3 Learning Resources ONLY**: Title, Type, Provider, Duration, Cost, URL/Search term
-                - **5-step Improvement Plan** with timelines
-                - **Timeline**: Estimated months to become qualified
+                - **overallMatch**: Number (0-100).
+                - **strengths**: Array of 3 key competitive advantages.
+                - **weaknesses**: Array of 3 critical missing elements.
+                - **skillGaps**: Array of EXACTLY 3 objects with {skill, priority, currentLevel, requiredLevel, learningPath (string array)}.
+                - **learningResources**: Array of EXACTLY 3 objects with {title, type, provider, duration, cost, url}.
+                - **improvementPlan**: Array of 5 actionable steps with timelines.
+                - **timeline**: Estimated time to become fully qualified (string).
 
             Return all information as a single JSON object matching the provided schema.
 
@@ -495,6 +493,27 @@ export default function App() {
           parsedData.companyIntelligence.groundingSources = uniqueSources;
         }
       }
+
+      // --- Robust Initialization Layer ---
+      // Ensure all major objects exist to prevent UI crashes/missing sections
+      if (!parsedData.cvEvaluation) {
+          parsedData.cvEvaluation = {
+              overallMatch: 50,
+              strengths: [],
+              weaknesses: [],
+              skillGaps: [],
+              learningResources: [],
+              improvementPlan: [],
+              timeline: "Requires formal assessment"
+          };
+      }
+      
+      // Ensure arrays are initialized even if AI skips them
+      if (!parsedData.cvEvaluation.strengths) parsedData.cvEvaluation.strengths = [];
+      if (!parsedData.cvEvaluation.weaknesses) parsedData.cvEvaluation.weaknesses = [];
+      if (!parsedData.cvEvaluation.skillGaps) parsedData.cvEvaluation.skillGaps = [];
+      if (!parsedData.cvEvaluation.learningResources) parsedData.cvEvaluation.learningResources = [];
+      if (!parsedData.cvEvaluation.improvementPlan) parsedData.cvEvaluation.improvementPlan = [];
 
       // --- Puerto Rico Specific Robustness Layer ---
       // Initialize missing data structures to prevent undefined errors

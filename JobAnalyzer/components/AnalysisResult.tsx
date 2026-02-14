@@ -94,9 +94,12 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
 
     return (
         <div className="flex flex-col h-full">
-            {/* Hidden Full Report Container for PDF Generation */}
-            <div className="absolute left-[-9999px] top-0 w-[1024px]">
-                <div ref={fullReportRef} className="bg-white p-12 space-y-12">
+            {/* Hidden Full Report Container for PDF Generation - Improved for Browser Rendering */}
+            <div 
+                className="fixed top-0 left-0 w-[1024px] pointer-events-none overflow-hidden" 
+                style={{ visibility: 'hidden', zIndex: -100, height: 'auto' }}
+            >
+                <div ref={fullReportRef} className="bg-white p-12 space-y-12 min-h-screen">
                      <div className="flex mb-6 pb-4 border-b border-slate-100 justify-between items-end">
                         <div>
                             <h2 className="text-xl font-black text-blue-800 uppercase tracking-widest">Formal Analysis Report</h2>
