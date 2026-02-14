@@ -10,6 +10,7 @@ import { LoginPage } from "./components/LoginPage";
 import { BenchmarkView } from "./components/tabs/BenchmarkView";
 import { OnboardingView } from "./components/tabs/OnboardingView";
 import { InstructionsView } from "./components/tabs/InstructionsView";
+import { CVAnalysisTab } from "./components/tabs/CVAnalysisTab";
 import type { FormData, AnalysisData } from "./types";
 import { AppState, ActiveTab } from "./types";
 import { isAuthenticated, enforceAuthentication } from "./utils/auth";
@@ -853,5 +854,3 @@ export default function App() {
     </div>
   );
 }
-
-import { CVAnalysisTab } from "./components/tabs/CVAnalysisTab";
