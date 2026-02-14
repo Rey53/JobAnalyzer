@@ -26,6 +26,9 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
         setIsDownloading(true);
 
         try {
+            // Give the hidden container a moment to fully render and paint
+            await new Promise(resolve => setTimeout(resolve, 500));
+
             const canvas = await html2canvas(fullReportRef.current, {
                 scale: 2,
                 useCORS: true,
@@ -35,7 +38,15 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
                 x: 0,
                 y: 0,
                 scrollX: 0,
-                scrollY: 0
+                scrollY: 0,
+                onclone: (clonedDoc) => {
+                    // Ensure the cloned element is actually visible to the capture engine
+                    const el = clonedDoc.querySelector('[data-pdf-report="true"]') as HTMLElement;
+                    if (el) {
+                        el.style.opacity = '1';
+                        el.style.visibility = 'visible';
+                    }
+                }
             });
             
             const imgData = canvas.toDataURL('image/png');
@@ -97,9 +108,13 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
             {/* Hidden Full Report Container for PDF Generation - Improved for Browser Rendering */}
             <div 
                 className="fixed top-0 left-0 w-[1024px] pointer-events-none overflow-hidden" 
-                style={{ visibility: 'hidden', zIndex: -100, height: 'auto' }}
+                style={{ opacity: 0, zIndex: -100, height: 'auto' }}
             >
-                <div ref={fullReportRef} className="bg-white p-12 space-y-12 min-h-screen">
+                <div 
+                    ref={fullReportRef} 
+                    data-pdf-report="true"
+                    className="bg-white p-12 space-y-12 min-h-screen"
+                >
                      <div className="flex mb-6 pb-4 border-b border-slate-100 justify-between items-end">
                         <div>
                             <h2 className="text-xl font-black text-blue-800 uppercase tracking-widest">Formal Analysis Report</h2>
