@@ -26,8 +26,22 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
         setIsDownloading(true);
 
         try {
-            // Give the hidden container a moment to fully render and paint
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // --- Force Paint Strategy ---
+            const reportContainer = document.getElementById('pdf-report-container');
+            if (reportContainer) {
+                reportContainer.style.position = 'fixed';
+                reportContainer.style.top = '0';
+                reportContainer.style.left = '0';
+                reportContainer.style.width = '1200px';
+                reportContainer.style.height = 'auto';
+                reportContainer.style.visibility = 'visible';
+                reportContainer.style.opacity = '1';
+                reportContainer.style.zIndex = '10000';
+                reportContainer.style.backgroundColor = '#ffffff';
+            }
+
+            // Give the container a moment to fully render and paint in the viewport
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             const canvas = await html2canvas(fullReportRef.current, {
                 scale: 2,
@@ -39,22 +53,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
                 y: 0,
                 scrollX: 0,
                 scrollY: 0,
-                onclone: (clonedDoc) => {
-                    // Ensure the entire parent container is visible to the capture engine
-                    const reportWrapper = clonedDoc.querySelector('[data-pdf-wrapper="true"]') as HTMLElement;
-                    const reportContent = clonedDoc.querySelector('[data-pdf-report="true"]') as HTMLElement;
-                    if (reportWrapper) {
-                        reportWrapper.style.opacity = '1';
-                        reportWrapper.style.visibility = 'visible';
-                        reportWrapper.style.position = 'relative';
-                        reportWrapper.style.left = '0';
-                    }
-                    if (reportContent) {
-                        reportContent.style.opacity = '1';
-                        reportContent.style.visibility = 'visible';
-                    }
-                }
             });
+
+            // Revert original layout immediately
+            if (reportContainer) {
+                reportContainer.style.position = 'absolute';
+                reportContainer.style.left = '-10000px';
+                reportContainer.style.zIndex = '-1';
+            }
             
             const imgData = canvas.toDataURL('image/png');
             // Check if image data is empty (only has header)
@@ -115,9 +121,10 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
         <div className="flex flex-col h-full">
             {/* Hidden Full Report Container for PDF Generation - Improved for Browser Rendering */}
             <div 
+                id="pdf-report-container"
                 data-pdf-wrapper="true"
                 className="fixed top-0 left-0 w-[1024px] pointer-events-none overflow-hidden" 
-                style={{ opacity: 0, zIndex: -100, height: 'auto' }}
+                style={{ position: 'absolute', left: '-10000px', opacity: 0, zIndex: -100, height: 'auto' }}
             >
                 <div 
                     ref={fullReportRef} 

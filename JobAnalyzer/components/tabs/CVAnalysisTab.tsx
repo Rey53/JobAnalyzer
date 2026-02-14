@@ -81,14 +81,14 @@ export const CVAnalysisTab: React.FC<TabProps> = ({ data, forceUnlock = false })
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 p-6">
+        <div className={`space-y-8 p-6 ${forceUnlock ? '' : 'animate-in fade-in slide-in-from-bottom-4 duration-500'}`}>
              <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 rounded-xl shadow-lg border-l-8 border-yellow-500">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <ShieldCheck className="w-10 h-10 text-yellow-400" />
                         <div>
-                            <h2 className="text-xl font-bold">Expert CV Critique & Gap Analysis</h2>
-                            <p className="text-slate-300 text-sm">Confidential assessment of your profile against the job description.</p>
+                            <h2 className="text-xl font-bold">Confidential Recruiter Audit: Profile vs. Job Strategy</h2>
+                            <p className="text-slate-300 text-sm">Critical gaps and alignment assessment for the Puerto Rico pharma sector.</p>
                         </div>
                     </div>
                     {data.cvEvaluation.overallMatch !== undefined && (
