@@ -134,6 +134,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, activeView
                         <div>
                             <h2 className="text-xl font-black text-blue-800 uppercase tracking-widest">Formal Analysis Report</h2>
                             <p className="text-sm text-slate-500 font-bold">Solicitor: <span className="text-blue-600">{data.solicitorName}</span></p>
+                            <p className="text-sm text-slate-500 font-bold">Role Analyzed: <span className="text-blue-600">{data.jobTitle || 'Not Specified'}</span></p>
                             <p className="text-xs text-slate-400">System ID: {reportId}</p>
                         </div>
                         <div className="text-right">

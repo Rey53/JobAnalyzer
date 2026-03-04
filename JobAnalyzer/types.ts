@@ -80,6 +80,7 @@ export interface LearningResource {
 export interface AnalysisData {
     solicitorName: string;
     inputModality: string;
+    jobTitle: string;
     companyIntelligence: {
         name: string;
         earnings: string;

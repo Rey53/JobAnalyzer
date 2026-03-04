@@ -582,6 +582,7 @@ export default function App() {
       // Attach input modality and solicitor
       parsedData.solicitorName = formData.solicitorName;
       parsedData.inputModality = formData.modality;
+      parsedData.jobTitle = formData.jobTitle;
 
       // Calculate salary breakdown
       parsedData.salaryBreakdown = {
@@ -672,20 +673,19 @@ export default function App() {
               };
           } else {
               // Generic fallback for unknown companies
-              if (!parsedData.companyIntelligence) {
-                  parsedData.companyIntelligence = {
-                      name: formData.company,
-                      earnings: "Private/Not Disclosed",
-                      growth: "Contact company directly for expansion details",
-                      rating: "Emerging/Regional Player",
-                      benefits: "Standard PR benefits expected (health, PTO, possible 401k)",
-                      salaryRanges: {
-                          junior: "$55,000 - $70,000",
-                          mid: "$70,000 - $90,000",
-                          senior: "$90,000 - $120,000"
-                      }
-                  };
-              }
+              parsedData.companyIntelligence = {
+                  ...parsedData.companyIntelligence,
+                  name: formData.company,
+                  earnings: parsedData.companyIntelligence?.earnings !== "N/A" && parsedData.companyIntelligence?.earnings ? parsedData.companyIntelligence.earnings : "Private/Not Disclosed",
+                  growth: parsedData.companyIntelligence?.growth !== "N/A" && parsedData.companyIntelligence?.growth ? parsedData.companyIntelligence.growth : "Contact company directly for expansion details",
+                  rating: parsedData.companyIntelligence?.rating !== "N/A" && parsedData.companyIntelligence?.rating ? parsedData.companyIntelligence.rating : "Emerging/Regional Player",
+                  benefits: parsedData.companyIntelligence?.benefits !== "N/A" && parsedData.companyIntelligence?.benefits ? parsedData.companyIntelligence.benefits : "Standard PR benefits expected (health, PTO, possible 401k)",
+                  salaryRanges: parsedData.companyIntelligence?.salaryRanges || {
+                      junior: "$55,000 - $70,000",
+                      mid: "$70,000 - $90,000",
+                      senior: "$90,000 - $120,000"
+                  }
+              };
           }
       }
 
