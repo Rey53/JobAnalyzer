@@ -165,7 +165,7 @@
     .hours-cell.zero { color: var(--muted); }
 
     table select {
-      width: 85px; padding: 6px 4px; text-align: center; cursor: pointer;
+      width: 95px; padding: 6px 4px; text-align: center; cursor: pointer;
     }
     table input[type=date] { width: 130px; padding: 6px 8px; }
     table textarea {
@@ -569,7 +569,14 @@ function generateTimeOptions() {
       const hh = h.toString().padStart(2, '0');
       const mm = m.toString().padStart(2, '0');
       const val = `${hh}:${mm}`;
-      opts += `<option value="${val}">${val}</option>`;
+      
+      const isPm = h >= 12;
+      let dispH = h % 12;
+      if (dispH === 0) dispH = 12;
+      const ampm = isPm ? 'PM' : 'AM';
+      const dispVal = `${dispH.toString().padStart(2, '0')}:${mm} ${ampm}`;
+
+      opts += `<option value="${val}">${dispVal}</option>`;
     }
   }
   return opts;
@@ -624,22 +631,37 @@ document.getElementById('week-start').addEventListener('change', onWeekChange);
 function onWeekChange() {
   const val = document.getElementById('week-start').value;
   if (!val) return;
-  const monday = new Date(val + 'T00:00:00');
-  DAYS.forEach((_, i) => {
+  const picked = new Date(val + 'T00:00:00');
+  
+  // Ensure the date is always set to Monday of that week
+  const monday = new Date(picked);
+  const dayOfWeek = picked.getDay();
+  // If it's Sunday (0), Monday is -6 days. Otherwise Monday is 1 - dayOfWeek
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  monday.setDate(picked.getDate() + diff);
+  
+  // Snap the top input to the correct Monday date
+  document.getElementById('week-start').value = monday.toISOString().split('T')[0];
+
+  DAYS.forEach((dayLabel, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     document.getElementById(`date-${i}`).value = d.toISOString().split('T')[0];
-    // Update day name
-    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    document.getElementById(`day-name-${i}`).textContent = dayNames[d.getDay()];
+    // Maintain strict Monday-Sunday layout
+    document.getElementById(`day-name-${i}`).textContent = dayLabel;
   });
   calcAll();
 }
 
 function syncDates(idx) {
-  // When user changes Monday's date, re-cascade; otherwise just calc
-  if (idx === 0) onWeekChange();
-  calcRow(idx);
+  // If user changes Monday's date in the table directly, update the week-start and re-cascade
+  if (idx === 0) {
+    document.getElementById('week-start').value = document.getElementById('date-0').value;
+    onWeekChange();
+  } else {
+    // Other days shouldn't change the whole week, or we could prevent it? Just recalc row for now
+    calcRow(idx);
+  }
 }
 
 /* ── CALCULATE HOURS ───────────────────────────────────────────── */
