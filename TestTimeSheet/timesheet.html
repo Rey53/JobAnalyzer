@@ -642,18 +642,32 @@
 <!-- Toast -->
 <div id="toast"></div>
 
-<!-- ================================================================
-     SCRIPTS
-================================================================ -->
+<!-- Supabase JS Client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
+/* ── SUPABASE CONFIG ────────────────────────────────── */
+const SUPABASE_URL = 'http://supabase-supabase-dc0e69-195-26-253-159.traefik.me';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzM4ODg0NzIsImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSJ9.BfF_As2-X-NBoDh2RnojWRIw3r1XjIEgfM8quNhtKXI';
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 /* ── LOGIN LOGIC ────────────────────────────────────── */
-function checkLogin() {
-  const u = document.getElementById('login-user').value.trim();
-  const p = document.getElementById('login-pass').value.trim();
+async function checkLogin() {
+  const u = document.getElementById('login-user').value.trim(); // Email
+  const p = document.getElementById('login-pass').value.trim(); // Password
   const err = document.getElementById('login-error');
+  const btn = document.querySelector('#login-overlay .btn-send');
   
-  // Hardcoded Username and Password!
-  if (u === 'EqvalAdmin' && p === 'Eqval2026!') {
+  btn.disabled = true;
+  btn.innerText = "Authenticating...";
+
+  // Try Supabase Auth
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: u,
+    password: p,
+  });
+
+  if (!error) {
     document.getElementById('login-overlay').style.opacity = '0';
     setTimeout(() => {
       document.getElementById('login-overlay').style.visibility = 'hidden';
@@ -662,8 +676,23 @@ function checkLogin() {
       setTimeout(() => { app.style.opacity = '1'; }, 50);
     }, 400);
   } else {
-    err.style.display = 'block';
+    // Fallback to hardcoded admin for safety durante migration
+    if (u === 'EqvalAdmin' && p === 'Eqval2026!') {
+       // Success
+       document.getElementById('login-overlay').style.opacity = '0';
+       setTimeout(() => {
+         document.getElementById('login-overlay').style.visibility = 'hidden';
+         const app = document.getElementById('app-wrapper');
+         app.style.display = 'block';
+         setTimeout(() => { app.style.opacity = '1'; }, 50);
+       }, 400);
+    } else {
+       err.innerText = error.message === "Invalid login credentials" ? "Incorrect Email or Password!" : error.message;
+       err.style.display = 'block';
+    }
   }
+  btn.disabled = false;
+  btn.innerText = "Login to Timesheet";
 }
 
 // Press Enter to login
@@ -705,15 +734,15 @@ function setDefaults() {
   const monday = new Date(today);
   const diff = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7;
   monday.setDate(today.getDate() + (dayOfWeek === 1 ? 0 : diff));
-  // Restore Timesheet Number
+  // Baseline: March 30, 2026 as Week 1
+  const baseline = '2026-03-30';
   const savedTs = localStorage.getItem('tsNumber') || '1';
   document.getElementById('ts-number').value = savedTs;
 
-  // Find last Monday instead
-  const lastMon = new Date(today);
-  lastMon.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-  const isoMon = lastMon.toISOString().split('T')[0];
-  document.getElementById('week-start').value = isoMon;
+  const savedWeek = localStorage.getItem('minimed_app_state') ? 
+    JSON.parse(localStorage.getItem('minimed_app_state')).weekStart : baseline;
+
+  document.getElementById('week-start').value = savedWeek;
   onWeekChange();
 
   // Set today's signature date
@@ -869,6 +898,10 @@ function startNextWeek() {
   }
 
   saveAppState();
+  
+  // Clear Supabase Row ID to create a new record for the new week
+  localStorage.removeItem('supabase_row_id');
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1022,6 +1055,35 @@ function saveAppState() {
   }
   
   localStorage.setItem('minimed_app_state', JSON.stringify(data));
+  
+  // Background Sync to Supabase
+  syncToSupabase(data);
+}
+
+async function syncToSupabase(payloadData) {
+  let rowId = localStorage.getItem('supabase_row_id');
+  const record = { payload: payloadData };
+
+  try {
+    if (rowId) {
+      const { error } = await supabase
+        .from('timesheets')
+        .update(record)
+        .eq('id', rowId);
+      if (error) console.error("Supabase sync error:", error);
+    } else {
+      const { data, error } = await supabase
+        .from('timesheets')
+        .insert([record])
+        .select();
+      
+      if (!error && data && data[0]) {
+        localStorage.setItem('supabase_row_id', data[0].id);
+      }
+    }
+  } catch (e) {
+    console.warn("Supabase background sync failed, staying local.", e);
+  }
 }
 
 function loadAppState() {
