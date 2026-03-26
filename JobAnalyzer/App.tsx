@@ -414,7 +414,7 @@ export default function App() {
           console.log(`Attempting analysis with model: ${currentModel}`);
           const modelRef = ai.models.generateContent({
             model: currentModel,
-            contents: { parts: parts },
+            contents: [{ parts: parts }],
             config: {
               responseMimeType: "application/json",
               responseSchema: responseSchema,

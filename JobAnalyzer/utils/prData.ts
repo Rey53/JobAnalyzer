@@ -63,8 +63,8 @@ export const getDistance = (from: string, to: string): number => {
 };
 
 export const BENCHMARKS = {
-    gasPricePerLiter: 0.91,
-    lumaRate: 0.33,
+    gasPricePerLiter: 0.92,
+    lumaRate: 0.26,
     avgMpg: 22,
     workingDaysPerMonth: 20
 };
