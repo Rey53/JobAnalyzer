@@ -384,6 +384,10 @@
         <label for="proj-code">Project / PO Code</label>
         <input type="text" id="proj-code" value="EQValPR" />
       </div>
+      <div>
+        <label for="ts-number">Timesheet # (Auto-increments)</label>
+        <input type="number" id="ts-number" value="1" oninput="updateEnumaration()" />
+      </div>
     </div>
   </div>
 
@@ -657,6 +661,10 @@ function setDefaults() {
   const monday = new Date(today);
   const diff = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7;
   monday.setDate(today.getDate() + (dayOfWeek === 1 ? 0 : diff));
+  // Restore Timesheet Number
+  const savedTs = localStorage.getItem('tsNumber') || '1';
+  document.getElementById('ts-number').value = savedTs;
+
   // Find last Monday instead
   const lastMon = new Date(today);
   lastMon.setDate(today.getDate() - ((today.getDay() + 6) % 7));
@@ -668,6 +676,12 @@ function setDefaults() {
   const todayIso = today.toISOString().split('T')[0];
   document.getElementById('prof-date').value = todayIso;
   document.getElementById('sup-date').value  = todayIso;
+}
+
+function updateEnumaration() {
+  const num = document.getElementById('ts-number').value;
+  localStorage.setItem('tsNumber', num);
+  onWeekChange();
 }
 
 /* ── BUILD TABLE ───────────────────────────────────────────── */
@@ -758,7 +772,10 @@ function onWeekChange() {
   sunday.setDate(monday.getDate() + 6);
   const startFmt = monday.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
   const endFmt = sunday.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-  document.getElementById('page-title').innerHTML = `Weekly <span>Timesheet</span>: ${startFmt} - ${endFmt}`;
+  
+  const tsVal = document.getElementById('ts-number').value;
+  const tsStr = tsVal ? ` No. ${tsVal}` : '';
+  document.getElementById('page-title').innerHTML = `Weekly <span>Timesheet${tsStr}</span>: ${startFmt} - ${endFmt}`;
 
   DAYS.forEach((dayLabel, i) => {
     const d = new Date(monday);
@@ -792,7 +809,13 @@ function startNextWeek() {
   document.getElementById('prof-sig').value = '';
   document.getElementById('sup-sig').value  = '';
 
-  // 3. Advance week date by 7 days
+  // 3. Advance Timesheet Number
+  const tsEl = document.getElementById('ts-number');
+  const n = parseInt(tsEl.value, 10) || 0;
+  tsEl.value = n + 1;
+  localStorage.setItem('tsNumber', tsEl.value);
+
+  // 4. Advance week date by 7 days
   const val = document.getElementById('week-start').value;
   if (val) {
     const monday = new Date(val + 'T00:00:00');
@@ -992,8 +1015,9 @@ function collectData() {
 
     // Meta
     generatedAt      : new Date().toISOString(),
+    tsNumber         : document.getElementById('ts-number').value,
     // Full HTML email body embedded
-    emailHtml        : buildEmailHtml({ professionalName: document.getElementById('prof-name').value, company: document.getElementById('company').value, title: document.getElementById('title').value, weekStart: document.getElementById('week-start').value, supervisor: document.getElementById('supervisor').value, projectCode: document.getElementById('proj-code').value, days, totalHours: totalHours.toFixed(2), grossPay: fmt(gross), prWithholding: fmt(prWh), socialSecurity: fmt(ss), medicare: fmt(medicare), totalRetentions: fmt(totalRet), netPay: fmt(net), prevYtdGross: fmt(prevYtdGross), newYtdGross: fmt(newYtdGross), prevYtdNet: fmt(prevYtdNet), newYtdNet: fmt(newYtdNet), effectiveRate: ((totalRet/gross)*100||0).toFixed(2)+'%', comments: document.getElementById('comments').value, profSignature: document.getElementById('prof-sig').value, profSignDate: document.getElementById('prof-date').value, supSignature: document.getElementById('sup-sig').value, supSignDate: document.getElementById('sup-date').value })
+    emailHtml        : buildEmailHtml({ tsNumber: document.getElementById('ts-number').value, professionalName: document.getElementById('prof-name').value, company: document.getElementById('company').value, title: document.getElementById('title').value, weekStart: document.getElementById('week-start').value, supervisor: document.getElementById('supervisor').value, projectCode: document.getElementById('proj-code').value, days, totalHours: totalHours.toFixed(2), grossPay: fmt(gross), prWithholding: fmt(prWh), socialSecurity: fmt(ss), medicare: fmt(medicare), totalRetentions: fmt(totalRet), netPay: fmt(net), prevYtdGross: fmt(prevYtdGross), newYtdGross: fmt(newYtdGross), prevYtdNet: fmt(prevYtdNet), newYtdNet: fmt(newYtdNet), effectiveRate: ((totalRet/gross)*100||0).toFixed(2)+'%', comments: document.getElementById('comments').value, profSignature: document.getElementById('prof-sig').value, profSignDate: document.getElementById('prof-date').value, supSignature: document.getElementById('sup-sig').value, supSignDate: document.getElementById('sup-date').value })
   };
 }
 
@@ -1017,7 +1041,7 @@ function buildEmailHtml(d) {
 <div style="max-width:800px;margin:0 auto;padding:20px;">
   <!-- Header -->
   <div style="background:linear-gradient(135deg,#1e2a6e,#12173b);border-radius:12px;padding:28px 32px;margin-bottom:20px;">
-    <div style="font-size:28px;font-weight:800;color:#ffffff;margin-bottom:6px;">🕐 Weekly Timesheet</div>
+    <div style="font-size:28px;font-weight:800;color:#ffffff;margin-bottom:6px;">🕐 Weekly Timesheet No. ${d.tsNumber || '1'}</div>
     <div style="color:#8891b4;font-size:14px;">MiniMed Personal · Professional Services · Puerto Rico</div>
   </div>
 
