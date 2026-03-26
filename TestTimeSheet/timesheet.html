@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekly Timesheet — MiniMed Personal</title>
+  <meta name="description" content="Interactive weekly timesheet with PR tax withholding calculations and automated email delivery via n8n." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ======================================================
+       DESIGN SYSTEM / TOKENS
+    ====================================================== */
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --card:      #20243a;
+      --border:    #2e3350;
+      --accent:    #4f6ef7;
+      --accent2:   #7c5af7;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --amber:     #f59e0b;
+      --text:      #e8eaf2;
+      --muted:     #8891b4;
+      --radius:    12px;
+      --radius-sm: 6px;
+      --shadow:    0 4px 24px rgba(0,0,0,.55);
+      --rate:      53;  /* $/hr – used by JS */
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 80px;
+    }
+
+    /* ── TOP HERO BANNER ── */
+    .hero {
+      background: linear-gradient(135deg, #1e2a6e 0%, #12173b 60%, #1a0a3b 100%);
+      padding: 36px 40px 28px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, rgba(79,110,247,.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-top { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .logo-badge {
+      display: flex; align-items: center; justify-content: center;
+      width: 54px; height: 54px; border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      font-size: 24px; flex-shrink: 0;
+      box-shadow: 0 0 24px rgba(79,110,247,.5);
+    }
+    .hero h1 { font-size: 1.7rem; font-weight: 800; letter-spacing: -.5px; }
+    .hero h1 span { background: linear-gradient(90deg,#6b8bff,#a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+    .badge-pr {
+      margin-left: auto;
+      background: rgba(79,110,247,.18);
+      border: 1px solid rgba(79,110,247,.4);
+      color: #a5b4fc;
+      font-size: .72rem; font-weight: 600; letter-spacing: .5px;
+      padding: 5px 12px; border-radius: 999px;
+    }
+
+    /* ── MAIN WRAPPER ── */
+    .main { max-width: 100%; margin: 0 auto; padding: 28px 40px; }
+
+    /* ── SECTION CARD ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      transition: border-color .2s;
+    }
+    .card:focus-within { border-color: var(--accent); }
+
+    .section-title {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--muted);
+      display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+    }
+    .section-title::before {
+      content: '';
+      display: inline-block; width: 3px; height: 14px;
+      background: linear-gradient(var(--accent), var(--accent2));
+      border-radius: 2px;
+    }
+
+    /* ── FORM GRID ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    @media (max-width: 640px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+    label {
+      display: block;
+      font-size: .75rem; font-weight: 600; color: var(--muted);
+      margin-bottom: 6px; letter-spacing: .3px;
+    }
+    input[type=text], input[type=email], input[type=date], input[type=time],
+    select, textarea {
+      width: 100%; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--text); font-family: inherit;
+      font-size: .88rem; padding: 9px 12px;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,110,247,.18);
+    }
+    input[readonly] {
+      background: rgba(255,255,255,.04);
+      color: var(--muted); cursor: not-allowed;
+    }
+    textarea { min-height: 72px; resize: vertical; line-height: 1.5; }
+    select option { background: var(--surface); }
+
+    /* ── TIME TABLE ── */
+    .time-table-wrap { overflow-x: auto; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: .83rem;
+    }
+    thead th {
+      background: var(--surface); color: var(--muted);
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; padding: 10px 8px; text-align: center;
+      border-bottom: 2px solid var(--border);
+    }
+    thead th:first-child { text-align: left; }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background .15s; }
+    tbody tr:hover { background: rgba(255,255,255,.03); }
+    tbody td { padding: 8px 6px; text-align: center; vertical-align: middle; }
+    tbody td:first-child { text-align: left; }
+
+    .day-label {
+      font-weight: 600; font-size: .82rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent); flex-shrink: 0;
+    }
+    .dot.weekend { background: var(--muted); }
+
+    .hours-cell {
+      font-weight: 700; font-size: 1rem;
+      color: var(--green);
+    }
+    .hours-cell.zero { color: var(--muted); }
+
+    table select {
+      width: 85px; padding: 6px 4px; text-align: center; cursor: pointer;
+    }
+    table input[type=date] { width: 130px; padding: 6px 8px; }
+    table textarea {
+      min-height: 40px; font-size: .78rem; padding: 6px 8px;
+      width: 100%; min-width: 180px;
+    }
+
+    /* ── TOTAL HOURS BANNER ── */
+    .total-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+      background: linear-gradient(135deg, rgba(79,110,247,.12), rgba(124,90,247,.08));
+      border: 1px solid rgba(79,110,247,.3);
+      border-radius: var(--radius); padding: 18px 24px;
+      margin-bottom: 20px;
+    }
+    .total-banner .label { font-size: .8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .8px; }
+    .total-banner .value { font-size: 2.4rem; font-weight: 800; color: #fff; line-height: 1; }
+    .total-banner .value span { font-size: 1rem; color: var(--muted); margin-left: 4px; }
+
+    /* ── PAY SUMMARY CARDS ── */
+    .pay-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;
+      margin-bottom: 20px;
+    }
+    .pay-item {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 20px;
+      transition: transform .2s, border-color .2s;
+    }
+    .pay-item:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .pay-item .pi-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 6px; }
+    .pay-item .pi-value { font-size: 1.55rem; font-weight: 800; color: var(--text); }
+    .pay-item .pi-value.green { color: var(--green); }
+    .pay-item .pi-value.red   { color: var(--red); }
+    .pay-item .pi-value.amber { color: var(--amber); }
+    .pay-item .pi-sub { font-size: .72rem; color: var(--muted); margin-top: 3px; }
+
+    /* ── WITHHOLDING BREAKDOWN ── */
+    .wh-table { width: 100%; }
+    .wh-table tr td { padding: 6px 0; font-size: .85rem; }
+    .wh-table tr td:last-child { text-align: right; font-weight: 600; }
+    .wh-table .total-row td { border-top: 1px solid var(--border); padding-top: 12px; font-weight: 700; font-size: .95rem; }
+    .wh-tag {
+      display: inline-block; font-size: .65rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 999px;
+      background: rgba(79,110,247,.18); color: #a5b4fc;
+      margin-left: 6px; letter-spacing: .3px;
+    }
+
+    /* ── COMMENTS ── */
+    .comments-wrap { margin-bottom: 20px; }
+
+    /* ── SIGNATURE GRID ── */
+    .sig-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    }
+    @media(max-width:520px) { .sig-grid { grid-template-columns: 1fr; } }
+
+    /* ── SEND BUTTON ── */
+    .btn-send {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 15px 24px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; font-family: inherit; font-size: 1rem; font-weight: 700;
+      border: none; border-radius: var(--radius); cursor: pointer;
+      letter-spacing: .3px;
+      box-shadow: 0 4px 20px rgba(79,110,247,.45);
+      transition: opacity .2s, transform .15s, box-shadow .2s;
+    }
+    .btn-send:hover { opacity:.92; transform: translateY(-1px); box-shadow: 0 6px 28px rgba(79,110,247,.55); }
+    .btn-send:active { transform: translateY(0); }
+    .btn-send:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--text); font-size: .85rem; font-weight: 500;
+      padding: 12px 22px; border-radius: 999px; box-shadow: var(--shadow);
+      transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+      opacity: 0; z-index: 9999; white-space: nowrap;
+      display: flex; align-items: center; gap: 8px;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    #toast.success { border-color: var(--green); }
+    #toast.error   { border-color: var(--red); }
+
+    /* ── VALIDATION HIGHLIGHT ── */
+    input.invalid, select.invalid, textarea.invalid {
+      border-color: var(--red) !important;
+      box-shadow: 0 0 0 3px rgba(239,68,68,.18) !important;
+    }
+
+    /* ── WEEK TAG ── */
+    .week-tag {
+      font-size: .75rem; color: var(--muted); margin-left: auto;
+      font-weight: 500;
+    }
+
+    /* ── RATE BADGE ── */
+    .rate-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3);
+      color: #4ade80; font-size: .75rem; font-weight: 700;
+      padding: 4px 12px; border-radius: 999px; margin-left: 8px;
+    }
+
+    /* ── SPINNER ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .7s linear infinite; display: none;
+    }
+    .btn-send.loading .spinner { display: block; }
+    .btn-send.loading .btn-label { display: none; }
+
+    /* ── INFO BUBBLE ── */
+    .info-note {
+      background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25);
+      border-radius: var(--radius-sm); padding: 10px 14px;
+      font-size: .78rem; color: #fbbf24; margin-bottom: 20px;
+      display: flex; gap: 8px; align-items: flex-start;
+    }
+    .info-note svg { flex-shrink: 0; margin-top: 1px; }
+  </style>
+</head>
+<body>
+
+<!-- ████ HERO ████ -->
+<div class="hero">
+  <div class="hero-top">
+    <div class="logo-badge">🕐</div>
+    <div>
+      <h1>Weekly <span>Timesheet</span></h1>
+      <p>MiniMed Personal · Professional Services</p>
+    </div>
+    <div class="badge-pr">🇵🇷 Puerto Rico · PR Tax Withholding</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- INFO NOTE -->
+  <div class="info-note">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+    <span>Rate: <strong>$53.00/hr</strong> · PR Withholding: <strong>10%</strong> (Hacienda – Independent Contractor) · Both PR &amp; Federal retention applied automatically.</span>
+  </div>
+
+  <!-- ████ SECTION 1 – HEADER INFO ████ -->
+  <div class="card">
+    <div class="section-title">Professional &amp; Project Info</div>
+    <div class="grid-2" style="gap:14px">
+      <div>
+        <label for="prof-name">Professional (Employee) Name</label>
+        <input type="text" id="prof-name" placeholder="e.g. Luis Rey Morales" />
+      </div>
+      <div>
+        <label for="company">Company / Client</label>
+        <input type="text" id="company" placeholder="e.g. MiniMed – Juncos" />
+      </div>
+      <div>
+        <label for="title">Job Title / Role</label>
+        <input type="text" id="title" placeholder="e.g. Validation Engineer" />
+      </div>
+      <div>
+        <label for="week-start">Week Starting (Monday)</label>
+        <input type="date" id="week-start" />
+      </div>
+      <div>
+        <label for="supervisor">Supervisor Name</label>
+        <input type="text" id="supervisor" placeholder="e.g. José González" />
+      </div>
+      <div>
+        <label for="proj-code">Project / PO Code</label>
+        <input type="text" id="proj-code" placeholder="e.g. PRJ-2026-MM01" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ████ SECTION 2 – DAILY TIME ENTRIES ████ -->
+  <div class="card">
+    <div class="section-title" style="justify-content:space-between">
+      <span>Daily Time Entries</span>
+      <span class="rate-badge">💵 $53.00 / hr</span>
+    </div>
+    <div class="time-table-wrap">
+      <table id="ts-table">
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>Date</th>
+            <th>Start</th>
+            <th>Lunch Out</th>
+            <th>Lunch In</th>
+            <th>End</th>
+            <th>Hours</th>
+            <th style="min-width:200px;text-align:left">Work Description</th>
+          </tr>
+        </thead>
+        <tbody id="ts-body">
+          <!-- rows injected by JS -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6" style="text-align:right;font-size:.78rem;font-weight:700;color:var(--muted);padding:12px 6px;letter-spacing:.5px;text-transform:uppercase;">TOTAL HOURS</td>
+            <td id="total-hours-cell" style="text-align:center;font-size:1.3rem;font-weight:800;color:var(--green);padding:12px 6px;">0.00</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- ████ SECTION 3 – PAY SUMMARY ████ -->
+  <div class="total-banner">
+    <div>
+      <div class="label">Total Hours This Week</div>
+      <div class="value" id="banner-hours">0.00 <span>hrs</span></div>
+    </div>
+    <div style="text-align:right">
+      <div class="label">Gross Pay (G18 × $53)</div>
+      <div class="value" id="banner-gross" style="color:#818cf8;">$0.00</div>
+    </div>
+  </div>
+
+  <div class="pay-grid">
+    <div class="pay-item">
+      <div class="pi-label">Gross Pay</div>
+      <div class="pi-value green" id="sum-gross">$0.00</div>
+      <div class="pi-sub">Total hrs × $53.00</div>
+    </div>
+    <div class="pay-item">
+      <div class="pi-label">PR Withholding <span class="wh-tag">10%</span></div>
+      <div class="pi-value red" id="sum-pr-wh">-$0.00</div>
+      <div class="pi-sub">Hacienda – Independiente</div>
+    </div>
+    <div class="pay-item">
+      <div class="pi-label">Fed FICA SS <span class="wh-tag">6.2%</span></div>
+      <div class="pi-value amber" id="sum-ss">-$0.00</div>
+      <div class="pi-sub">Social Security (FICA)</div>
+    </div>
+    <div class="pay-item">
+      <div class="pi-label">Medicare <span class="wh-tag">1.45%</span></div>
+      <div class="pi-value amber" id="sum-medicare">-$0.00</div>
+      <div class="pi-sub">Medicare Part A</div>
+    </div>
+    <div class="pay-item" style="border-color:var(--green)">
+      <div class="pi-label">Net Pay</div>
+      <div class="pi-value green" id="sum-net">$0.00</div>
+      <div class="pi-sub">After all withholdings</div>
+    </div>
+    <div class="pay-item">
+      <div class="pi-label">Total Retentions</div>
+      <div class="pi-value red" id="sum-total-ret">-$0.00</div>
+      <div class="pi-sub">PR + SS + Medicare</div>
+    </div>
+  </div>
+
+  <!-- Withholding breakdown card -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="section-title">PR Tax Withholding Breakdown</div>
+    <table class="wh-table">
+      <tbody>
+        <tr>
+          <td>Gross Pay (G18 × $53/hr)</td>
+          <td id="wh-gross">$0.00</td>
+        </tr>
+        <tr>
+          <td>
+            PR Hacienda Withholding
+            <span class="wh-tag">10% · Independiente</span>
+          </td>
+          <td id="wh-pr" style="color:var(--red)">-$0.00</td>
+        </tr>
+        <tr>
+          <td>
+            Social Security (FICA)
+            <span class="wh-tag">6.2%</span>
+          </td>
+          <td id="wh-ss" style="color:var(--amber)">-$0.00</td>
+        </tr>
+        <tr>
+          <td>
+            Medicare
+            <span class="wh-tag">1.45%</span>
+          </td>
+          <td id="wh-med" style="color:var(--amber)">-$0.00</td>
+        </tr>
+        <tr class="total-row">
+          <td>Net Amount to Professional</td>
+          <td id="wh-net" style="color:var(--green)">$0.00</td>
+        </tr>
+        <tr>
+          <td style="color:var(--muted);font-size:.75rem;padding-top:8px">
+            Effective Total Retention Rate
+          </td>
+          <td id="wh-eff" style="color:var(--muted);font-size:.8rem;">0.00%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ████ SECTION 4 – COMMENTS ████ -->
+  <div class="card comments-wrap">
+    <div class="section-title">Comments / Observations</div>
+    <textarea id="comments" placeholder="Add any notes, observations, or special remarks for this week..."></textarea>
+  </div>
+
+  <!-- ████ SECTION 5 – SIGNATURES ████ -->
+  <div class="card">
+    <div class="section-title">Signatures</div>
+    <div class="sig-grid">
+      <div>
+        <label for="prof-sig">Professional Name (signature)</label>
+        <input type="text" id="prof-sig" placeholder="Type full legal name" />
+        <label for="prof-date" style="margin-top:10px">Date Signed</label>
+        <input type="date" id="prof-date" />
+      </div>
+      <div>
+        <label for="sup-sig">Supervisor Name (signature)</label>
+        <input type="text" id="sup-sig" placeholder="Type full legal name" />
+        <label for="sup-date" style="margin-top:10px">Date Signed</label>
+        <input type="date" id="sup-date" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ████ SECTION 6 – SEND VIA EMAIL ████ -->
+  <div class="card">
+    <div class="section-title">Send Timesheet via Email</div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div>
+        <label for="send-to">Recipient Email</label>
+        <input type="email" id="send-to" value="reyenergybroker@gmail.com" />
+      </div>
+      <div>
+        <label for="send-cc">CC (optional)</label>
+        <input type="email" id="send-cc" placeholder="supervisor@company.com" />
+      </div>
+    </div>
+    <button class="btn-send" id="btn-send" onclick="sendTimesheet()">
+      <div class="spinner"></div>
+      <span class="btn-label">✉️ &nbsp; Send Timesheet to reyenergybroker@gmail.com via n8n</span>
+    </button>
+  </div>
+
+</div><!-- /main -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ================================================================
+     SCRIPTS
+================================================================ -->
+<script>
+/* ── CONFIG ───────────────────────────────────────────── */
+const RATE          = 53;           // $/hr – mirrors G18 × $53
+const PR_WH_RATE    = 0.10;         // 10% Hacienda (Independiente)
+const SS_RATE       = 0.062;        // 6.2% Social Security (FICA)
+const MEDICARE_RATE = 0.0145;       // 1.45% Medicare
+
+// n8n webhook URL — replace with your actual n8n webhook URL
+const N8N_WEBHOOK   = 'https://n8n.servicioxpert.com/webhook/timesheet-send';
+
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const WEEKEND = [5, 6]; // Saturday, Sunday (0-indexed)
+
+/* ── INIT ───────────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', () => {
+  buildTable();
+  setDefaults();
+});
+
+function setDefaults() {
+  // Default week: next Monday
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0=Sun
+  const monday = new Date(today);
+  const diff = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7;
+  monday.setDate(today.getDate() + (dayOfWeek === 1 ? 0 : diff));
+  // Find last Monday instead
+  const lastMon = new Date(today);
+  lastMon.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const isoMon = lastMon.toISOString().split('T')[0];
+  document.getElementById('week-start').value = isoMon;
+  onWeekChange();
+
+  // Set today's signature date
+  const todayIso = today.toISOString().split('T')[0];
+  document.getElementById('prof-date').value = todayIso;
+  document.getElementById('sup-date').value  = todayIso;
+}
+
+/* ── BUILD TABLE ───────────────────────────────────────────── */
+function generateTimeOptions() {
+  let opts = '<option value="">--</option>';
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const hh = h.toString().padStart(2, '0');
+      const mm = m.toString().padStart(2, '0');
+      const val = `${hh}:${mm}`;
+      opts += `<option value="${val}">${val}</option>`;
+    }
+  }
+  return opts;
+}
+
+function buildTable() {
+  const tbody = document.getElementById('ts-body');
+  tbody.innerHTML = '';
+  const timeOptions = generateTimeOptions();
+  DAYS.forEach((day, i) => {
+    const isWeekend = WEEKEND.includes(i);
+    const row = document.createElement('tr');
+    row.id = `row-${i}`;
+    row.innerHTML = `
+      <td>
+        <div class="day-label">
+          <div class="dot ${isWeekend ? 'weekend' : ''}"></div>
+          <span id="day-name-${i}">${day}</span>
+        </div>
+      </td>
+      <td><input type="date" id="date-${i}" onchange="syncDates(${i})" /></td>
+      <td><select id="start-${i}" onchange="calcRow(${i})">${timeOptions}</select></td>
+      <td><select id="lout-${i}" onchange="calcRow(${i})">${timeOptions}</select></td>
+      <td><select id="lin-${i}" onchange="calcRow(${i})">${timeOptions}</select></td>
+      <td><select id="end-${i}" onchange="calcRow(${i})">${timeOptions}</select></td>
+      <td class="hours-cell zero" id="hrs-${i}">0.00</td>
+      <td><textarea id="desc-${i}" rows="2" placeholder="Work performed…"></textarea></td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  // Populate default descriptions for weekdays
+  const defaultDescs = [
+    'Validation protocol testing & IQ/OQ documentation review',
+    'Equipment calibration verification and SOP update',
+    'Change control review and deviations report',
+    'Audit preparation – gap analysis documentation',
+    'QA final inspection & weekly report submittal',
+    '',
+    ''
+  ];
+  defaultDescs.forEach((d, i) => {
+    document.getElementById(`desc-${i}`).value = d;
+  });
+
+  calcAll();
+}
+
+/* ── WEEK DATE SYNC ───────────────────────────────────────────── */
+document.getElementById('week-start').addEventListener('change', onWeekChange);
+
+function onWeekChange() {
+  const val = document.getElementById('week-start').value;
+  if (!val) return;
+  const monday = new Date(val + 'T00:00:00');
+  DAYS.forEach((_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    document.getElementById(`date-${i}`).value = d.toISOString().split('T')[0];
+    // Update day name
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    document.getElementById(`day-name-${i}`).textContent = dayNames[d.getDay()];
+  });
+  calcAll();
+}
+
+function syncDates(idx) {
+  // When user changes Monday's date, re-cascade; otherwise just calc
+  if (idx === 0) onWeekChange();
+  calcRow(idx);
+}
+
+/* ── CALCULATE HOURS ───────────────────────────────────────────── */
+function timeToMin(timeStr) {
+  if (!timeStr) return null;
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function calcRow(i) {
+  const startEl = document.getElementById(`start-${i}`);
+  const loutEl  = document.getElementById(`lout-${i}`);
+  const linEl   = document.getElementById(`lin-${i}`);
+  const endEl   = document.getElementById(`end-${i}`);
+  
+  const start = timeToMin(startEl.value);
+  const lout  = timeToMin(loutEl.value);
+  const lin   = timeToMin(linEl.value);
+  const end   = timeToMin(endEl.value);
+  const cell  = document.getElementById(`hrs-${i}`);
+
+  // Clear previous invalid styles
+  startEl.classList.remove('invalid');
+  loutEl.classList.remove('invalid');
+  linEl.classList.remove('invalid');
+  endEl.classList.remove('invalid');
+
+  let hours = 0;
+  let isValid = true;
+
+  if (start !== null) {
+    if (lout !== null && lout <= start) {
+      loutEl.classList.add('invalid');
+      isValid = false;
+    }
+    if (lout !== null && lin !== null && lin <= lout) {
+      linEl.classList.add('invalid');
+      isValid = false;
+    }
+    if (end !== null) {
+      if (lin !== null && end <= lin) {
+        endEl.classList.add('invalid');
+        isValid = false;
+      }
+      if (lout === null && lin === null && end <= start) {
+        endEl.classList.add('invalid');
+        isValid = false;
+      }
+    }
+  }
+
+  if (isValid && start !== null && end !== null && end > start) {
+    const worked = end - start;
+    let lunch = 0;
+    if (lout !== null && lin !== null && lin > lout && lout > start && lin < end) {
+      lunch = lin - lout;
+    }
+    hours = (worked - lunch) / 60;
+    if (hours < 0) hours = 0;
+  }
+  
+  cell.textContent = hours.toFixed(2);
+  cell.className = `hours-cell${hours === 0 ? ' zero' : ''}`;
+  calcAll();
+}
+
+function calcAll() {
+  let total = 0;
+  DAYS.forEach((_, i) => {
+    const v = parseFloat(document.getElementById(`hrs-${i}`).textContent) || 0;
+    total += v;
+  });
+
+  const gross     = total * RATE;
+  const prWh      = gross * PR_WH_RATE;
+  const ss        = gross * SS_RATE;
+  const medicare  = gross * MEDICARE_RATE;
+  const totalRet  = prWh + ss + medicare;
+  const net       = gross - totalRet;
+  const effRate   = gross > 0 ? (totalRet / gross * 100) : 0;
+
+  const fmt = (n, minus) => `${minus ? '-' : ''}$${Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+  // Banner
+  document.getElementById('banner-hours').innerHTML = `${total.toFixed(2)} <span>hrs</span>`;
+  document.getElementById('banner-gross').textContent = fmt(gross);
+  document.getElementById('total-hours-cell').textContent = total.toFixed(2);
+
+  // Cards
+  document.getElementById('sum-gross').textContent    = fmt(gross);
+  document.getElementById('sum-pr-wh').textContent    = fmt(prWh, true);
+  document.getElementById('sum-ss').textContent       = fmt(ss, true);
+  document.getElementById('sum-medicare').textContent = fmt(medicare, true);
+  document.getElementById('sum-net').textContent      = fmt(net);
+  document.getElementById('sum-total-ret').textContent= fmt(totalRet, true);
+
+  // Breakdown table
+  document.getElementById('wh-gross').textContent = fmt(gross);
+  document.getElementById('wh-pr').textContent    = fmt(prWh, true);
+  document.getElementById('wh-ss').textContent    = fmt(ss, true);
+  document.getElementById('wh-med').textContent   = fmt(medicare, true);
+  document.getElementById('wh-net').textContent   = fmt(net);
+  document.getElementById('wh-eff').textContent   = effRate.toFixed(2) + '%';
+}
+
+/* ── COLLECT FORM DATA ───────────────────────────────────────────── */
+function collectData() {
+  const days = DAYS.map((day, i) => ({
+    day,
+    date    : document.getElementById(`date-${i}`).value,
+    start   : document.getElementById(`start-${i}`).value,
+    lunchOut: document.getElementById(`lout-${i}`).value,
+    lunchIn : document.getElementById(`lin-${i}`).value,
+    end     : document.getElementById(`end-${i}`).value,
+    hours   : parseFloat(document.getElementById(`hrs-${i}`).textContent) || 0,
+    desc    : document.getElementById(`desc-${i}`).value
+  }));
+
+  const totalHours  = days.reduce((a, d) => a + d.hours, 0);
+  const gross       = totalHours * RATE;
+  const prWh        = gross * PR_WH_RATE;
+  const ss          = gross * SS_RATE;
+  const medicare    = gross * MEDICARE_RATE;
+  const totalRet    = prWh + ss + medicare;
+  const net         = gross - totalRet;
+
+  const fmt = (n) => `$${n.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+  return {
+    // Header
+    professionalName : document.getElementById('prof-name').value,
+    company          : document.getElementById('company').value,
+    title            : document.getElementById('title').value,
+    weekStart        : document.getElementById('week-start').value,
+    supervisor       : document.getElementById('supervisor').value,
+    projectCode      : document.getElementById('proj-code').value,
+    comments         : document.getElementById('comments').value,
+    profSignature    : document.getElementById('prof-sig').value,
+    profSignDate     : document.getElementById('prof-date').value,
+    supSignature     : document.getElementById('sup-sig').value,
+    supSignDate      : document.getElementById('sup-date').value,
+
+    // Days
+    days,
+
+    // Financial
+    rate             : RATE,
+    totalHours       : totalHours.toFixed(2),
+    grossPay         : fmt(gross),
+    grossPayRaw      : gross,
+    prWithholding    : fmt(prWh),
+    prWithholdingRaw : prWh,
+    socialSecurity   : fmt(ss),
+    socialSecurityRaw: ss,
+    medicare         : fmt(medicare),
+    medicareRaw      : medicare,
+    totalRetentions  : fmt(totalRet),
+    totalRetentionsRaw: totalRet,
+    netPay           : fmt(net),
+    netPayRaw        : net,
+    effectiveRate    : ((totalRet / gross) * 100).toFixed(2) + '%',
+
+    // Email
+    recipientEmail   : document.getElementById('send-to').value,
+    ccEmail          : document.getElementById('send-cc').value,
+
+    // Meta
+    generatedAt      : new Date().toISOString(),
+    // Full HTML email body embedded
+    emailHtml        : buildEmailHtml({ professionalName: document.getElementById('prof-name').value, company: document.getElementById('company').value, title: document.getElementById('title').value, weekStart: document.getElementById('week-start').value, supervisor: document.getElementById('supervisor').value, projectCode: document.getElementById('proj-code').value, days, totalHours: totalHours.toFixed(2), grossPay: fmt(gross), prWithholding: fmt(prWh), socialSecurity: fmt(ss), medicare: fmt(medicare), totalRetentions: fmt(totalRet), netPay: fmt(net), effectiveRate: ((totalRet/gross)*100||0).toFixed(2)+'%', comments: document.getElementById('comments').value, profSignature: document.getElementById('prof-sig').value, profSignDate: document.getElementById('prof-date').value, supSignature: document.getElementById('sup-sig').value, supSignDate: document.getElementById('sup-date').value })
+  };
+}
+
+/* ── BUILD EMAIL HTML ───────────────────────────────────────────── */
+function buildEmailHtml(d) {
+  const rows = d.days.map(r => `
+    <tr style="border-bottom:1px solid #2e3350;">
+      <td style="padding:8px 10px;font-weight:600;color:#e8eaf2;">${r.day}</td>
+      <td style="padding:8px 10px;color:#8891b4;">${r.date || '—'}</td>
+      <td style="padding:8px 10px;color:#8891b4;">${r.start || '—'}</td>
+      <td style="padding:8px 10px;color:#8891b4;">${r.lunchOut || '—'}</td>
+      <td style="padding:8px 10px;color:#8891b4;">${r.lunchIn || '—'}</td>
+      <td style="padding:8px 10px;color:#8891b4;">${r.end || '—'}</td>
+      <td style="padding:8px 10px;font-weight:700;color:${r.hours > 0 ? '#22c55e' : '#8891b4'};">${r.hours.toFixed(2)}</td>
+      <td style="padding:8px 10px;color:#8891b4;font-size:12px;">${r.desc || ''}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#0f1117;font-family:Arial,sans-serif;">
+<div style="max-width:800px;margin:0 auto;padding:20px;">
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#1e2a6e,#12173b);border-radius:12px;padding:28px 32px;margin-bottom:20px;">
+    <div style="font-size:28px;font-weight:800;color:#ffffff;margin-bottom:6px;">🕐 Weekly Timesheet</div>
+    <div style="color:#8891b4;font-size:14px;">MiniMed Personal · Professional Services · Puerto Rico</div>
+  </div>
+
+  <!-- Info -->
+  <div style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:20px 24px;margin-bottom:20px;display:flex;gap:16px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:180px;"><div style="color:#8891b4;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Professional</div><div style="color:#e8eaf2;font-weight:700;">${d.professionalName || '—'}</div></div>
+    <div style="flex:1;min-width:180px;"><div style="color:#8891b4;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Company</div><div style="color:#e8eaf2;font-weight:700;">${d.company || '—'}</div></div>
+    <div style="flex:1;min-width:180px;"><div style="color:#8891b4;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Title</div><div style="color:#e8eaf2;font-weight:700;">${d.title || '—'}</div></div>
+    <div style="flex:1;min-width:180px;"><div style="color:#8891b4;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Week Of</div><div style="color:#e8eaf2;font-weight:700;">${d.weekStart || '—'}</div></div>
+    <div style="flex:1;min-width:180px;"><div style="color:#8891b4;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Supervisor</div><div style="color:#e8eaf2;font-weight:700;">${d.supervisor || '—'}</div></div>
+    <div style="flex:1;min-width:180px;"><div style="color:#8891b4;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Project Code</div><div style="color:#e8eaf2;font-weight:700;">${d.projectCode || '—'}</div></div>
+  </div>
+
+  <!-- Time Table -->
+  <div style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;overflow:hidden;margin-bottom:20px;">
+    <div style="background:#20243a;padding:12px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8891b4;">Daily Time Entries</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:#20243a;">
+          <th style="padding:10px;color:#8891b4;text-align:left;font-size:11px;text-transform:uppercase;">Day</th>
+          <th style="padding:10px;color:#8891b4;font-size:11px;text-transform:uppercase;">Date</th>
+          <th style="padding:10px;color:#8891b4;font-size:11px;text-transform:uppercase;">Start</th>
+          <th style="padding:10px;color:#8891b4;font-size:11px;text-transform:uppercase;">Lch Out</th>
+          <th style="padding:10px;color:#8891b4;font-size:11px;text-transform:uppercase;">Lch In</th>
+          <th style="padding:10px;color:#8891b4;font-size:11px;text-transform:uppercase;">End</th>
+          <th style="padding:10px;color:#8891b4;font-size:11px;text-transform:uppercase;">Hours</th>
+          <th style="padding:10px;color:#8891b4;font-size:11px;text-transform:uppercase;text-align:left;">Description</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr style="background:#1e2540;">
+          <td colspan="6" style="padding:12px 10px;text-align:right;color:#8891b4;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">TOTAL HOURS (G18)</td>
+          <td style="padding:12px 10px;text-align:center;font-size:1.2em;font-weight:800;color:#22c55e;">${d.totalHours}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- Pay Summary -->
+  <div style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:20px 24px;margin-bottom:20px;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8891b4;margin-bottom:16px;">💰 Pay &amp; Withholding Summary — Puerto Rico Law</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr><td style="padding:8px 0;color:#e8eaf2;font-size:14px;">Gross Pay (${d.totalHours} hrs × $53.00)</td><td style="text-align:right;font-weight:700;color:#22c55e;font-size:14px;">${d.grossPay}</td></tr>
+      <tr><td style="padding:8px 0;color:#e8eaf2;font-size:14px;">PR Hacienda Withholding <span style="background:rgba(79,110,247,.3);color:#a5b4fc;font-size:10px;padding:2px 8px;border-radius:999px;margin-left:6px;">10% · Independiente</span></td><td style="text-align:right;font-weight:700;color:#ef4444;font-size:14px;">-${d.prWithholding}</td></tr>
+      <tr><td style="padding:8px 0;color:#e8eaf2;font-size:14px;">Social Security (FICA) <span style="background:rgba(245,158,11,.2);color:#fbbf24;font-size:10px;padding:2px 8px;border-radius:999px;margin-left:6px;">6.2%</span></td><td style="text-align:right;font-weight:700;color:#f59e0b;font-size:14px;">-${d.socialSecurity}</td></tr>
+      <tr><td style="padding:8px 0;color:#e8eaf2;font-size:14px;">Medicare <span style="background:rgba(245,158,11,.2);color:#fbbf24;font-size:10px;padding:2px 8px;border-radius:999px;margin-left:6px;">1.45%</span></td><td style="text-align:right;font-weight:700;color:#f59e0b;font-size:14px;">-${d.medicare}</td></tr>
+      <tr style="border-top:1px solid #2e3350;">
+        <td style="padding:14px 0 8px;color:#ffffff;font-size:16px;font-weight:700;">Net Pay to Professional</td>
+        <td style="text-align:right;font-size:20px;font-weight:800;color:#22c55e;padding-top:14px;">${d.netPay}</td>
+      </tr>
+      <tr>
+        <td style="color:#8891b4;font-size:12px;">Total Retentions</td>
+        <td style="text-align:right;color:#ef4444;font-size:12px;font-weight:600;">-${d.totalRetentions}</td>
+      </tr>
+      <tr>
+        <td style="color:#8891b4;font-size:12px;">Effective Withholding Rate</td>
+        <td style="text-align:right;color:#8891b4;font-size:12px;">${d.effectiveRate}</td>
+      </tr>
+    </table>
+  </div>
+
+  ${d.comments ? `
+  <div style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8891b4;margin-bottom:8px;">Comments</div>
+    <div style="color:#e8eaf2;font-size:13px;line-height:1.6;">${d.comments}</div>
+  </div>` : ''}
+
+  <!-- Signatures -->
+  <div style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;gap:20px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:200px;border-right:1px solid #2e3350;padding-right:20px;">
+      <div style="color:#8891b4;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Professional</div>
+      <div style="color:#e8eaf2;font-weight:700;font-size:14px;margin-bottom:4px;">${d.profSignature || d.professionalName || '—'}</div>
+      <div style="color:#8891b4;font-size:12px;">Date: ${d.profSignDate || '—'}</div>
+    </div>
+    <div style="flex:1;min-width:200px;">
+      <div style="color:#8891b4;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Supervisor</div>
+      <div style="color:#e8eaf2;font-weight:700;font-size:14px;margin-bottom:4px;">${d.supSignature || d.supervisor || '—'}</div>
+      <div style="color:#8891b4;font-size:12px;">Date: ${d.supSignDate || '—'}</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;color:#8891b4;font-size:11px;padding:16px 0;">
+    Generated by Timesheet System · MiniMed Personal · Puerto Rico<br/>
+    Rate: $53.00/hr · PR Law: 10% Withholding (Independent Contractor)<br/>
+    ${new Date().toLocaleString('en-US', {timeZone:'America/Puerto_Rico'})} AST
+  </div>
+</div>
+</body></html>`;
+}
+
+/* ── SEND VIA n8n ───────────────────────────────────────────── */
+async function sendTimesheet() {
+  // Validate required fields
+  const required = [
+    { id: 'prof-name',    label: 'Professional Name' },
+    { id: 'company',      label: 'Company' },
+    { id: 'week-start',   label: 'Week Start Date' },
+    { id: 'send-to',      label: 'Recipient Email' },
+  ];
+  let valid = true;
+  required.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (!el.value.trim()) {
+      el.classList.add('invalid');
+      el.addEventListener('input', () => el.classList.remove('invalid'), { once: true });
+      valid = false;
+    }
+  });
+  if (!valid) { showToast('⚠️ Please fill in all required fields', 'error'); return; }
+
+  const btn = document.getElementById('btn-send');
+  btn.disabled = true;
+  btn.classList.add('loading');
+
+  const payload = collectData();
+
+  try {
+    const res = await fetch(N8N_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      showToast('✅ Timesheet sent to ' + payload.recipientEmail, 'success');
+    } else {
+      const text = await res.text();
+      throw new Error(`Server responded ${res.status}: ${text}`);
+    }
+  } catch (err) {
+    console.error('Send error:', err);
+    // Fallback: open mailto with summary
+    showToast('⚠️ n8n webhook unreachable — opening email fallback…', 'error');
+    setTimeout(() => openMailtoFallback(payload), 1500);
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  }
+}
+
+function openMailtoFallback(d) {
+  const subject = encodeURIComponent(`[Timesheet] ${d.professionalName} – Week of ${d.weekStart}`);
+  const body = encodeURIComponent(
+    `Weekly Timesheet Summary\n` +
+    `========================\n` +
+    `Professional: ${d.professionalName}\n` +
+    `Company:      ${d.company}\n` +
+    `Title:        ${d.title}\n` +
+    `Week Of:      ${d.weekStart}\n` +
+    `Supervisor:   ${d.supervisor}\n\n` +
+    `--- HOURS ---\n` +
+    d.days.map(r => `${r.day}: ${r.hours.toFixed(2)} hrs – ${r.desc}`).join('\n') +
+    `\n\nTotal Hours (G18): ${d.totalHours} hrs\n\n` +
+    `--- PAY SUMMARY (PR Law) ---\n` +
+    `Gross Pay:            ${d.grossPay}  (${d.totalHours} hrs × $${d.rate})\n` +
+    `PR Withholding (10%): -${d.prWithholding}\n` +
+    `Social Security (6.2%): -${d.socialSecurity}\n` +
+    `Medicare (1.45%):     -${d.medicare}\n` +
+    `Total Retentions:     -${d.totalRetentions}\n` +
+    `NET PAY:              ${d.netPay}\n\n` +
+    `Comments: ${d.comments}\n\n` +
+    `Professional: ${d.profSignature} — ${d.profSignDate}\n` +
+    `Supervisor:   ${d.supSignature} — ${d.supSignDate}`
+  );
+  window.location.href = `mailto:${d.recipientEmail}?subject=${subject}&body=${body}`;
+}
+
+/* ── TOAST ───────────────────────────────────────────── */
+let _toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.className = ''; }, 4000);
+}
+</script>
+</body>
+</html>
