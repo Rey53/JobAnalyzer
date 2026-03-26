@@ -165,7 +165,7 @@
     .hours-cell.zero { color: var(--muted); }
 
     table select {
-      width: 95px; padding: 6px 4px; text-align: center; cursor: pointer;
+      width: 110px; padding: 6px 0px; text-align: center; cursor: pointer;
     }
     table input[type=date] { width: 130px; padding: 6px 8px; }
     table textarea {
@@ -301,7 +301,7 @@
   <div class="hero-top">
     <div class="logo-badge">🕐</div>
     <div>
-      <h1>Weekly <span>Timesheet</span></h1>
+      <h1 id="page-title" style="font-size:1.8rem;">Weekly <span>Timesheet</span></h1>
       <p>MiniMed Personal · Professional Services</p>
     </div>
     <div class="badge-pr">🇵🇷 Puerto Rico · PR Tax Withholding</div>
@@ -388,7 +388,7 @@
       <div class="value" id="banner-hours">0.00 <span>hrs</span></div>
     </div>
     <div style="text-align:right">
-      <div class="label">Gross Pay (G18 × $53)</div>
+      <div class="label">Gross Pay (TOTAL HOURS × $53)</div>
       <div class="value" id="banner-gross" style="color:#818cf8;">$0.00</div>
     </div>
   </div>
@@ -405,12 +405,12 @@
       <div class="pi-sub">Hacienda – Independiente</div>
     </div>
     <div class="pay-item">
-      <div class="pi-label">Fed FICA SS <span class="wh-tag">6.2%</span></div>
+      <div class="pi-label">Fed FICA SS <span class="wh-tag">12.4%</span></div>
       <div class="pi-value amber" id="sum-ss">-$0.00</div>
       <div class="pi-sub">Social Security (FICA)</div>
     </div>
     <div class="pay-item">
-      <div class="pi-label">Medicare <span class="wh-tag">1.45%</span></div>
+      <div class="pi-label">Medicare <span class="wh-tag">2.9%</span></div>
       <div class="pi-value amber" id="sum-medicare">-$0.00</div>
       <div class="pi-sub">Medicare Part A</div>
     </div>
@@ -432,7 +432,7 @@
     <table class="wh-table">
       <tbody>
         <tr>
-          <td>Gross Pay (G18 × $53/hr)</td>
+          <td>Gross Pay (TOTAL HOURS × $53/hr)</td>
           <td id="wh-gross">$0.00</td>
         </tr>
         <tr>
@@ -445,14 +445,14 @@
         <tr>
           <td>
             Social Security (FICA)
-            <span class="wh-tag">6.2%</span>
+            <span class="wh-tag">12.4%</span>
           </td>
           <td id="wh-ss" style="color:var(--amber)">-$0.00</td>
         </tr>
         <tr>
           <td>
             Medicare
-            <span class="wh-tag">1.45%</span>
+            <span class="wh-tag">2.9%</span>
           </td>
           <td id="wh-med" style="color:var(--amber)">-$0.00</td>
         </tr>
@@ -470,7 +470,43 @@
     </table>
   </div>
 
-  <!-- ████ SECTION 4 – COMMENTS ████ -->
+  <!-- ████ SECTION 4 – YTD ACCUMULATION & $500 PR EXEMPTION ████ -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="section-title">YTD Accumulation & $500 PR Exemption</div>
+    <div style="font-size:13px; color:var(--muted); margin-bottom:12px; line-height:1.4;">
+      The first $500 of income in the year (beginning 03/30/2026) is exempt from PR Hacienda Withholding. Enter your previous accumulations here.
+    </div>
+    <div class="dates-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:16px;">
+      <div class="input-group">
+        <label>Previous YTD Gross Pay ($)</label>
+        <input type="number" id="prev-ytd-gross" value="0.00" step="0.01" onchange="calcAll()" style="width:100%;font-size:16px;background:var(--page-bg);" />
+      </div>
+      <div class="input-group">
+        <label>Previous YTD Net Pay ($)</label>
+        <input type="number" id="prev-ytd-net" value="0.00" step="0.01" onchange="calcAll()" style="width:100%;font-size:16px;background:var(--page-bg);" />
+      </div>
+    </div>
+    <div style="padding-top:12px; border-top:1px solid #2e3350; font-size:14px; font-weight:500;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+        <span style="color:var(--text)">Current Week Gross:</span>
+        <span id="ytd-curr-gross" style="color:var(--green)">$0.00</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+        <span style="color:var(--text)">New YTD Gross Pay:</span>
+        <span id="ytd-new-gross" style="color:#818cf8; font-size:16px; font-weight:700;">$0.00</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+        <span style="color:var(--text)">Current Week Net:</span>
+        <span id="ytd-curr-net" style="color:var(--green)">$0.00</span>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span style="color:var(--text)">New YTD Net Pay:</span>
+        <span id="ytd-new-net" style="color:#818cf8; font-size:16px; font-weight:700;">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ████ SECTION 5 – COMMENTS ████ -->
   <div class="card comments-wrap">
     <div class="section-title">Comments / Observations</div>
     <textarea id="comments" placeholder="Add any notes, observations, or special remarks for this week..."></textarea>
@@ -508,10 +544,15 @@
         <input type="email" id="send-cc" placeholder="supervisor@company.com" />
       </div>
     </div>
-    <button class="btn-send" id="btn-send" onclick="sendTimesheet()">
-      <div class="spinner"></div>
-      <span class="btn-label">✉️ &nbsp; Send Timesheet to reyenergybroker@gmail.com via n8n</span>
-    </button>
+    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+      <button class="btn-send" id="btn-send" onclick="sendTimesheet()" style="flex:2; min-width:250px;">
+        <div class="spinner"></div>
+        <span class="btn-label">✉️ &nbsp; Send Timesheet via n8n</span>
+      </button>
+      <button class="btn-send" onclick="startNextWeek()" style="flex:1; min-width:200px; background:var(--surface); border:1px solid #4f6ef7; color:#a5b4fc;">
+        <span class="btn-label">⏭️ &nbsp; Rollover Next Week</span>
+      </button>
+    </div>
   </div>
 
 </div><!-- /main -->
@@ -526,11 +567,11 @@
 /* ── CONFIG ───────────────────────────────────────────── */
 const RATE          = 53;           // $/hr – mirrors G18 × $53
 const PR_WH_RATE    = 0.10;         // 10% Hacienda (Independiente)
-const SS_RATE       = 0.062;        // 6.2% Social Security (FICA)
-const MEDICARE_RATE = 0.0145;       // 1.45% Medicare
+const SS_RATE       = 0.124;        // 12.4% Social Security (FICA)
+const MEDICARE_RATE = 0.029;        // 2.9% Medicare
 
 // n8n webhook URL — replace with your actual n8n webhook URL
-const N8N_WEBHOOK   = 'https://n8n.servicioxpert.com/webhook/timesheet-send';
+const N8N_WEBHOOK   = 'https://n8ncon.servicioxpert.com/webhook/timesheet-send';
 
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const WEEKEND = [5, 6]; // Saturday, Sunday (0-indexed)
@@ -562,7 +603,7 @@ function setDefaults() {
 }
 
 /* ── BUILD TABLE ───────────────────────────────────────────── */
-function generateTimeOptions() {
+function generateTimeOptions(activeVal = '', minVal = '') {
   let opts = '<option value="">--</option>';
   for (let h = 0; h < 24; h++) {
     for (let m = 0; m < 60; m += 15) {
@@ -570,13 +611,16 @@ function generateTimeOptions() {
       const mm = m.toString().padStart(2, '0');
       const val = `${hh}:${mm}`;
       
+      if (minVal && val <= minVal) continue;
+
       const isPm = h >= 12;
       let dispH = h % 12;
       if (dispH === 0) dispH = 12;
       const ampm = isPm ? 'PM' : 'AM';
       const dispVal = `${dispH.toString().padStart(2, '0')}:${mm} ${ampm}`;
 
-      opts += `<option value="${val}">${dispVal}</option>`;
+      const sel = val === activeVal ? ' selected' : '';
+      opts += `<option value="${val}"${sel}>${dispVal}</option>`;
     }
   }
   return opts;
@@ -585,7 +629,6 @@ function generateTimeOptions() {
 function buildTable() {
   const tbody = document.getElementById('ts-body');
   tbody.innerHTML = '';
-  const timeOptions = generateTimeOptions();
   DAYS.forEach((day, i) => {
     const isWeekend = WEEKEND.includes(i);
     const row = document.createElement('tr');
@@ -598,10 +641,10 @@ function buildTable() {
         </div>
       </td>
       <td><input type="date" id="date-${i}" onchange="syncDates(${i})" /></td>
-      <td><select id="start-${i}" onchange="calcRow(${i})">${timeOptions}</select></td>
-      <td><select id="lout-${i}" onchange="calcRow(${i})">${timeOptions}</select></td>
-      <td><select id="lin-${i}" onchange="calcRow(${i})">${timeOptions}</select></td>
-      <td><select id="end-${i}" onchange="calcRow(${i})">${timeOptions}</select></td>
+      <td><select id="start-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '08:00')}</select></td>
+      <td><select id="lout-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '12:00', isWeekend ? '' : '08:00')}</select></td>
+      <td><select id="lin-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '13:00', isWeekend ? '' : '12:00')}</select></td>
+      <td><select id="end-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '17:00', isWeekend ? '' : '13:00')}</select></td>
       <td class="hours-cell zero" id="hrs-${i}">0.00</td>
       <td><textarea id="desc-${i}" rows="2" placeholder="Work performed…"></textarea></td>
     `;
@@ -643,6 +686,12 @@ function onWeekChange() {
   // Snap the top input to the correct Monday date
   document.getElementById('week-start').value = monday.toISOString().split('T')[0];
 
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const startFmt = monday.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  const endFmt = sunday.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  document.getElementById('page-title').innerHTML = `Weekly <span>Timesheet</span>: ${startFmt} - ${endFmt}`;
+
   DAYS.forEach((dayLabel, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
@@ -651,6 +700,40 @@ function onWeekChange() {
     document.getElementById(`day-name-${i}`).textContent = dayLabel;
   });
   calcAll();
+}
+
+function startNextWeek() {
+  if (!confirm('Are you sure you want to rollover to the next week? This will clear current hours and advance your YTD accumulations.')) return;
+  
+  // 1. Roll over YTD
+  const newGrossStr = document.getElementById('ytd-new-gross').textContent.replace(/[^0-9.-]/g, '');
+  const newNetStr   = document.getElementById('ytd-new-net').textContent.replace(/[^0-9.-]/g, '');
+  
+  document.getElementById('prev-ytd-gross').value = parseFloat(newGrossStr) || 0;
+  document.getElementById('prev-ytd-net').value   = parseFloat(newNetStr) || 0;
+
+  // 2. Reset time entries & signatures
+  for (let i = 0; i < 7; i++) {
+    document.getElementById(`start-${i}`).value = '';
+    document.getElementById(`lout-${i}`).value  = '';
+    document.getElementById(`lin-${i}`).value   = '';
+    document.getElementById(`end-${i}`).value   = '';
+    calcRow(i);
+  }
+  document.getElementById('comments').value = '';
+  document.getElementById('prof-sig').value = '';
+  document.getElementById('sup-sig').value  = '';
+
+  // 3. Advance week date by 7 days
+  const val = document.getElementById('week-start').value;
+  if (val) {
+    const monday = new Date(val + 'T00:00:00');
+    monday.setDate(monday.getDate() + 7);
+    document.getElementById('week-start').value = monday.toISOString().split('T')[0];
+    onWeekChange();
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function syncDates(idx) {
@@ -677,43 +760,26 @@ function calcRow(i) {
   const linEl   = document.getElementById(`lin-${i}`);
   const endEl   = document.getElementById(`end-${i}`);
   
+  // Re-generate inner options based strictly on chronological bounds
+  const valStart = startEl.value;
+  loutEl.innerHTML = generateTimeOptions(loutEl.value, valStart);
+  
+  const minLin = loutEl.value || valStart || '';
+  linEl.innerHTML = generateTimeOptions(linEl.value, minLin);
+  
+  const minEnd = linEl.value || loutEl.value || valStart || '';
+  endEl.innerHTML = generateTimeOptions(endEl.value, minEnd);
+
   const start = timeToMin(startEl.value);
   const lout  = timeToMin(loutEl.value);
   const lin   = timeToMin(linEl.value);
   const end   = timeToMin(endEl.value);
   const cell  = document.getElementById(`hrs-${i}`);
 
-  // Clear previous invalid styles
-  startEl.classList.remove('invalid');
-  loutEl.classList.remove('invalid');
-  linEl.classList.remove('invalid');
-  endEl.classList.remove('invalid');
-
   let hours = 0;
   let isValid = true;
-
-  if (start !== null) {
-    if (lout !== null && lout <= start) {
-      loutEl.classList.add('invalid');
-      isValid = false;
-    }
-    if (lout !== null && lin !== null && lin <= lout) {
-      linEl.classList.add('invalid');
-      isValid = false;
-    }
-    if (end !== null) {
-      if (lin !== null && end <= lin) {
-        endEl.classList.add('invalid');
-        isValid = false;
-      }
-      if (lout === null && lin === null && end <= start) {
-        endEl.classList.add('invalid');
-        isValid = false;
-      }
-    }
-  }
-
-  if (isValid && start !== null && end !== null && end > start) {
+  
+  if (start !== null && end !== null && end > start) {
     const worked = end - start;
     let lunch = 0;
     if (lout !== null && lin !== null && lin > lout && lout > start && lin < end) {
@@ -736,11 +802,22 @@ function calcAll() {
   });
 
   const gross     = total * RATE;
-  const prWh      = gross * PR_WH_RATE;
+  
+  // YTD Logic & Exemption
+  const prevYtdGross = parseFloat(document.getElementById('prev-ytd-gross').value) || 0;
+  const prevYtdNet   = parseFloat(document.getElementById('prev-ytd-net').value) || 0;
+  const newYtdGross  = prevYtdGross + gross;
+  
+  // First $500 exempt from PR Hacienda Withholding (10%)
+  const prSubject = Math.max(0, newYtdGross - Math.max(500, prevYtdGross));
+  const prWh      = prSubject * PR_WH_RATE;
+  
   const ss        = gross * SS_RATE;
   const medicare  = gross * MEDICARE_RATE;
   const totalRet  = prWh + ss + medicare;
   const net       = gross - totalRet;
+  
+  const newYtdNet = prevYtdNet + net;
   const effRate   = gross > 0 ? (totalRet / gross * 100) : 0;
 
   const fmt = (n, minus) => `${minus ? '-' : ''}$${Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
@@ -765,6 +842,12 @@ function calcAll() {
   document.getElementById('wh-med').textContent   = fmt(medicare, true);
   document.getElementById('wh-net').textContent   = fmt(net);
   document.getElementById('wh-eff').textContent   = effRate.toFixed(2) + '%';
+
+  // YTD Card
+  document.getElementById('ytd-curr-gross').textContent = fmt(gross);
+  document.getElementById('ytd-new-gross').textContent  = fmt(newYtdGross);
+  document.getElementById('ytd-curr-net').textContent   = fmt(net);
+  document.getElementById('ytd-new-net').textContent    = fmt(newYtdNet);
 }
 
 /* ── COLLECT FORM DATA ───────────────────────────────────────────── */
@@ -782,11 +865,18 @@ function collectData() {
 
   const totalHours  = days.reduce((a, d) => a + d.hours, 0);
   const gross       = totalHours * RATE;
-  const prWh        = gross * PR_WH_RATE;
+  
+  const prevYtdGross= parseFloat(document.getElementById('prev-ytd-gross').value) || 0;
+  const prevYtdNet  = parseFloat(document.getElementById('prev-ytd-net').value) || 0;
+  const newYtdGross = prevYtdGross + gross;
+  const prSubject   = Math.max(0, newYtdGross - Math.max(500, prevYtdGross));
+  const prWh        = prSubject * PR_WH_RATE;
+  
   const ss          = gross * SS_RATE;
   const medicare    = gross * MEDICARE_RATE;
   const totalRet    = prWh + ss + medicare;
   const net         = gross - totalRet;
+  const newYtdNet   = prevYtdNet + net;
 
   const fmt = (n) => `$${n.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
 
@@ -823,6 +913,10 @@ function collectData() {
     netPay           : fmt(net),
     netPayRaw        : net,
     effectiveRate    : ((totalRet / gross) * 100).toFixed(2) + '%',
+    prevYtdGross     : fmt(prevYtdGross),
+    newYtdGross      : fmt(newYtdGross),
+    prevYtdNet       : fmt(prevYtdNet),
+    newYtdNet        : fmt(newYtdNet),
 
     // Email
     recipientEmail   : document.getElementById('send-to').value,
@@ -831,7 +925,7 @@ function collectData() {
     // Meta
     generatedAt      : new Date().toISOString(),
     // Full HTML email body embedded
-    emailHtml        : buildEmailHtml({ professionalName: document.getElementById('prof-name').value, company: document.getElementById('company').value, title: document.getElementById('title').value, weekStart: document.getElementById('week-start').value, supervisor: document.getElementById('supervisor').value, projectCode: document.getElementById('proj-code').value, days, totalHours: totalHours.toFixed(2), grossPay: fmt(gross), prWithholding: fmt(prWh), socialSecurity: fmt(ss), medicare: fmt(medicare), totalRetentions: fmt(totalRet), netPay: fmt(net), effectiveRate: ((totalRet/gross)*100||0).toFixed(2)+'%', comments: document.getElementById('comments').value, profSignature: document.getElementById('prof-sig').value, profSignDate: document.getElementById('prof-date').value, supSignature: document.getElementById('sup-sig').value, supSignDate: document.getElementById('sup-date').value })
+    emailHtml        : buildEmailHtml({ professionalName: document.getElementById('prof-name').value, company: document.getElementById('company').value, title: document.getElementById('title').value, weekStart: document.getElementById('week-start').value, supervisor: document.getElementById('supervisor').value, projectCode: document.getElementById('proj-code').value, days, totalHours: totalHours.toFixed(2), grossPay: fmt(gross), prWithholding: fmt(prWh), socialSecurity: fmt(ss), medicare: fmt(medicare), totalRetentions: fmt(totalRet), netPay: fmt(net), prevYtdGross: fmt(prevYtdGross), newYtdGross: fmt(newYtdGross), prevYtdNet: fmt(prevYtdNet), newYtdNet: fmt(newYtdNet), effectiveRate: ((totalRet/gross)*100||0).toFixed(2)+'%', comments: document.getElementById('comments').value, profSignature: document.getElementById('prof-sig').value, profSignDate: document.getElementById('prof-date').value, supSignature: document.getElementById('sup-sig').value, supSignDate: document.getElementById('sup-date').value })
   };
 }
 
@@ -888,7 +982,7 @@ function buildEmailHtml(d) {
       <tbody>${rows}</tbody>
       <tfoot>
         <tr style="background:#1e2540;">
-          <td colspan="6" style="padding:12px 10px;text-align:right;color:#8891b4;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">TOTAL HOURS (G18)</td>
+          <td colspan="6" style="padding:12px 10px;text-align:right;color:#8891b4;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">TOTAL HOURS</td>
           <td style="padding:12px 10px;text-align:center;font-size:1.2em;font-weight:800;color:#22c55e;">${d.totalHours}</td>
           <td></td>
         </tr>
@@ -902,11 +996,27 @@ function buildEmailHtml(d) {
     <table style="width:100%;border-collapse:collapse;">
       <tr><td style="padding:8px 0;color:#e8eaf2;font-size:14px;">Gross Pay (${d.totalHours} hrs × $53.00)</td><td style="text-align:right;font-weight:700;color:#22c55e;font-size:14px;">${d.grossPay}</td></tr>
       <tr><td style="padding:8px 0;color:#e8eaf2;font-size:14px;">PR Hacienda Withholding <span style="background:rgba(79,110,247,.3);color:#a5b4fc;font-size:10px;padding:2px 8px;border-radius:999px;margin-left:6px;">10% · Independiente</span></td><td style="text-align:right;font-weight:700;color:#ef4444;font-size:14px;">-${d.prWithholding}</td></tr>
-      <tr><td style="padding:8px 0;color:#e8eaf2;font-size:14px;">Social Security (FICA) <span style="background:rgba(245,158,11,.2);color:#fbbf24;font-size:10px;padding:2px 8px;border-radius:999px;margin-left:6px;">6.2%</span></td><td style="text-align:right;font-weight:700;color:#f59e0b;font-size:14px;">-${d.socialSecurity}</td></tr>
-      <tr><td style="padding:8px 0;color:#e8eaf2;font-size:14px;">Medicare <span style="background:rgba(245,158,11,.2);color:#fbbf24;font-size:10px;padding:2px 8px;border-radius:999px;margin-left:6px;">1.45%</span></td><td style="text-align:right;font-weight:700;color:#f59e0b;font-size:14px;">-${d.medicare}</td></tr>
+      <tr><td style="padding:8px 0;color:#e8eaf2;font-size:14px;">Social Security (FICA) <span style="background:rgba(245,158,11,.2);color:#fbbf24;font-size:10px;padding:2px 8px;border-radius:999px;margin-left:6px;">12.4%</span></td><td style="text-align:right;font-weight:700;color:#f59e0b;font-size:14px;">-${d.socialSecurity}</td></tr>
+      <tr><td style="padding:8px 0;color:#e8eaf2;font-size:14px;">Medicare <span style="background:rgba(245,158,11,.2);color:#fbbf24;font-size:10px;padding:2px 8px;border-radius:999px;margin-left:6px;">2.9%</span></td><td style="text-align:right;font-weight:700;color:#f59e0b;font-size:14px;">-${d.medicare}</td></tr>
       <tr style="border-top:1px solid #2e3350;">
         <td style="padding:14px 0 8px;color:#ffffff;font-size:16px;font-weight:700;">Net Pay to Professional</td>
         <td style="text-align:right;font-size:20px;font-weight:800;color:#22c55e;padding-top:14px;">${d.netPay}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:20px 24px;margin-bottom:20px;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8891b4;margin-bottom:16px;">📈 YTD Accumulation & Exemption</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr><td style="padding:6px 0;color:#8891b4;font-size:13px;">Previous YTD Gross Pay</td><td style="text-align:right;color:#8891b4;font-size:13px;">${d.prevYtdGross}</td></tr>
+      <tr><td style="padding:6px 0;color:#8891b4;font-size:13px;">Previous YTD Net Pay</td><td style="text-align:right;color:#8891b4;font-size:13px;">${d.prevYtdNet}</td></tr>
+      <tr style="border-top:1px solid #2e3350;">
+        <td style="padding:10px 0 6px;color:#e8eaf2;font-size:14px;font-weight:700;">New YTD Gross Pay</td>
+        <td style="text-align:right;color:#818cf8;font-size:15px;font-weight:700;padding-top:10px;">${d.newYtdGross}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:#e8eaf2;font-size:14px;font-weight:700;">New YTD Net Pay</td>
+        <td style="text-align:right;color:#818cf8;font-size:15px;font-weight:700;">${d.newYtdNet}</td>
       </tr>
       <tr>
         <td style="color:#8891b4;font-size:12px;">Total Retentions</td>
@@ -1011,14 +1121,19 @@ function openMailtoFallback(d) {
     `Supervisor:   ${d.supervisor}\n\n` +
     `--- HOURS ---\n` +
     d.days.map(r => `${r.day}: ${r.hours.toFixed(2)} hrs – ${r.desc}`).join('\n') +
-    `\n\nTotal Hours (G18): ${d.totalHours} hrs\n\n` +
+    `\n\nTOTAL HOURS: ${d.totalHours} hrs\n\n` +
     `--- PAY SUMMARY (PR Law) ---\n` +
     `Gross Pay:            ${d.grossPay}  (${d.totalHours} hrs × $${d.rate})\n` +
     `PR Withholding (10%): -${d.prWithholding}\n` +
-    `Social Security (6.2%): -${d.socialSecurity}\n` +
-    `Medicare (1.45%):     -${d.medicare}\n` +
+    `Social Security (12.4%): -${d.socialSecurity}\n` +
+    `Medicare (2.9%):      -${d.medicare}\n` +
     `Total Retentions:     -${d.totalRetentions}\n` +
     `NET PAY:              ${d.netPay}\n\n` +
+    `--- YTD ACCUMULATION ---\n` +
+    `Previous YTD Gross:   ${d.prevYtdGross}\n` +
+    `New YTD Gross:        ${d.newYtdGross}\n` +
+    `Previous YTD Net:     ${d.prevYtdNet}\n` +
+    `New YTD Net:          ${d.newYtdNet}\n\n` +
     `Comments: ${d.comments}\n\n` +
     `Professional: ${d.profSignature} — ${d.profSignDate}\n` +
     `Supervisor:   ${d.supSignature} — ${d.supSignDate}`
