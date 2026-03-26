@@ -63,7 +63,7 @@
       box-shadow: 0 0 24px rgba(79,110,247,.5);
     }
     .hero h1 { font-size: 1.7rem; font-weight: 800; letter-spacing: -.5px; }
-    .hero h1 span { background: linear-gradient(90deg,#6b8bff,#a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero h1 span { background: linear-gradient(90deg,#6b8bff,#a78bfa); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     .hero p { color: var(--muted); font-size: .9rem; margin-top: 4px; }
     .badge-pr {
       margin-left: auto;
@@ -308,6 +308,40 @@
     .login-box img { max-width: 100%; height: auto; margin-bottom: 24px; }
     .login-box h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; color: #fff; }
     .login-error { color: var(--red); font-size: 0.85rem; margin-top: 16px; font-weight: 600; display: none; }
+
+    /* ── PRINT STYLES ── */
+    @media print {
+      body { background: #fff !important; color: #000 !important; padding: 0 !important; }
+      .hero { 
+        background: #fff !important; color: #000 !important; padding: 20px 10px !important; 
+        border-bottom: 2px solid #000 !important; margin-bottom: 15px !important;
+      }
+      .hero h1 span { -webkit-text-fill-color: #000 !important; background: none !important; }
+      .hero *, .hero-top * { color: #000 !important; }
+      .badge-pr, .logo-badge, .btn-send, .info-note, #toast, #login-overlay, .spinner, .dot { display: none !important; }
+      #app-wrapper { display: block !important; opacity: 1 !important; visibility: visible !important; }
+      .card { 
+        box-shadow: none !important; border: 1px solid #ccc !important; 
+        border-radius: 4px !important; margin-bottom: 15px !important; 
+        break-inside: avoid; background: #fff !important; 
+      }
+      .total-banner { background: #f0f0f0 !important; border: 1px solid #000 !important; color: #000 !important; }
+      .total-banner .value { color: #000 !important; -webkit-text-fill-color: initial !important; }
+      .pay-item { border: 1px solid #ccc !important; transform: none !important; color: #000 !important; }
+      .pi-value { color: #000 !important; }
+      .wh-tag { background: #eee !important; color: #000 !important; border: 1px solid #ccc !important; }
+      input, select, textarea { 
+        border: none !important; background: transparent !important; color: #000 !important; 
+        padding: 0 !important; appearance: none !important; -webkit-appearance: none !important;
+        resize: none !important; font-size: 13px !important;
+      }
+      th { background: #f0f0f0 !important; color: #000 !important; border-bottom: 2px solid #000 !important; padding: 6px !important; }
+      td { border-bottom: 1px solid #eee !important; padding: 6px !important; font-size: 12px !important; }
+      .hours-cell { color: #000 !important; font-weight: 800 !important; }
+      .section-title { color: #000 !important; border-bottom: 1px solid #eee !important; padding-bottom: 5px !important; }
+      .section-title::before { display: none; }
+      .pi-sub { color: #666 !important; }
+    }
   </style>
 </head>
 <body>
@@ -588,10 +622,13 @@
         <input type="email" id="send-cc" placeholder="supervisor@company.com" />
       </div>
     </div>
-    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
       <button class="btn-send" id="btn-send" onclick="sendTimesheet()" style="flex:2; min-width:250px;">
         <div class="spinner"></div>
         <span class="btn-label">✉️ &nbsp; Send Timesheet via n8n</span>
+      </button>
+      <button class="btn-send" onclick="window.print()" style="flex:1; min-width:180px; background:var(--surface); border:1px solid var(--accent); color:#a5b4fc;">
+        <span class="btn-label">🖨️ &nbsp; Print &nbsp; / &nbsp; Save PDF</span>
       </button>
       <button class="btn-send" onclick="startNextWeek()" style="flex:1; min-width:200px; background:var(--surface); border:1px solid #4f6ef7; color:#a5b4fc;">
         <span class="btn-label">⏭️ &nbsp; Rollover Next Week</span>
@@ -651,7 +688,14 @@ const WEEKEND = [5, 6]; // Saturday, Sunday (0-indexed)
 /* ── INIT ───────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded', () => {
   buildTable();
-  setDefaults();
+  if (!loadAppState()) {
+    setDefaults();
+  }
+  // Setup auto-save for all inputs
+  document.querySelectorAll('input, select, textarea').forEach(el => {
+    el.addEventListener('change', saveAppState);
+    el.addEventListener('input', saveAppState);
+  });
 });
 
 function setDefaults() {
@@ -728,7 +772,7 @@ function buildTable() {
       <td><select id="lin-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '13:00', isWeekend ? '' : '12:00')}</select></td>
       <td><select id="end-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '17:00', isWeekend ? '' : '13:00')}</select></td>
       <td class="hours-cell zero" id="hrs-${i}">0.00</td>
-      <td><textarea id="desc-${i}" rows="2" placeholder="Work performed…"></textarea></td>
+      <td><textarea id="desc-${i}" rows="2" placeholder="Work performed…" oninput="saveAppState()"></textarea></td>
     `;
     tbody.appendChild(row);
   });
@@ -824,6 +868,7 @@ function startNextWeek() {
     onWeekChange();
   }
 
+  saveAppState();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -939,6 +984,90 @@ function calcAll() {
   document.getElementById('ytd-new-gross').textContent  = fmt(newYtdGross);
   document.getElementById('ytd-curr-net').textContent   = fmt(net);
   document.getElementById('ytd-new-net').textContent    = fmt(newYtdNet);
+  
+  // Performance hack: only save to LS if something actually changed
+  // saveAppState();
+}
+
+/* ── LOCAL STORAGE PERSISTENCE ──────────────────────────────── */
+function saveAppState() {
+  const data = {
+    profName      : document.getElementById('prof-name').value,
+    company       : document.getElementById('company').value,
+    title         : document.getElementById('title').value,
+    weekStart     : document.getElementById('week-start').value,
+    supervisor    : document.getElementById('supervisor').value,
+    projCode      : document.getElementById('proj-code').value,
+    tsNumber      : document.getElementById('ts-number').value,
+    prevYtdGross  : document.getElementById('prev-ytd-gross').value,
+    prevYtdNet    : document.getElementById('prev-ytd-net').value,
+    comments      : document.getElementById('comments').value,
+    profSig       : document.getElementById('prof-sig').value,
+    profDate      : document.getElementById('prof-date').value,
+    supSig        : document.getElementById('sup-sig').value,
+    supDate       : document.getElementById('sup-date').value,
+    sendTo        : document.getElementById('send-to').value,
+    sendCc        : document.getElementById('send-cc').value,
+    days: []
+  };
+  
+  for (let i = 0; i < 7; i++) {
+    data.days.push({
+      start : document.getElementById(`start-${i}`).value,
+      lout  : document.getElementById(`lout-${i}`).value,
+      lin   : document.getElementById(`lin-${i}`).value,
+      end   : document.getElementById(`end-${i}`).value,
+      desc  : document.getElementById(`desc-${i}`).value
+    });
+  }
+  
+  localStorage.setItem('minimed_app_state', JSON.stringify(data));
+}
+
+function loadAppState() {
+    const saved = localStorage.getItem('minimed_app_state');
+    if (!saved) return false;
+    
+    try {
+        const data = JSON.parse(saved);
+        if (data.profName)    document.getElementById('prof-name').value = data.profName;
+        if (data.company)     document.getElementById('company').value = data.company;
+        if (data.title)       document.getElementById('title').value = data.title;
+        if (data.weekStart)   document.getElementById('week-start').value = data.weekStart;
+        if (data.supervisor)  document.getElementById('supervisor').value = data.supervisor;
+        if (data.projCode)    document.getElementById('proj-code').value = data.projCode;
+        if (data.tsNumber)    document.getElementById('ts-number').value = data.tsNumber;
+        if (data.prevYtdGross)document.getElementById('prev-ytd-gross').value = data.prevYtdGross;
+        if (data.prevYtdNet)  document.getElementById('prev-ytd-net').value = data.prevYtdNet;
+        if (data.comments)    document.getElementById('comments').value = data.comments;
+        if (data.profSig)     document.getElementById('prof-sig').value = data.profSig;
+        if (data.profDate)    document.getElementById('prof-date').value = data.profDate;
+        if (data.supSig)      document.getElementById('sup-sig').value = data.supSig;
+        if (data.supDate)     document.getElementById('sup-date').value = data.supDate;
+        if (data.sendTo)      document.getElementById('send-to').value = data.sendTo;
+        if (data.sendCc)      document.getElementById('send-cc').value = data.sendCc;
+        
+        if (data.days && Array.isArray(data.days)) {
+            data.days.forEach((d, i) => {
+                const rowId = i;
+                if (document.getElementById(`start-${rowId}`)) {
+                    document.getElementById(`start-${rowId}`).value = d.start;
+                    document.getElementById(`lout-${rowId}`).value  = d.lout;
+                    document.getElementById(`lin-${rowId}`).value   = d.lin;
+                    document.getElementById(`end-${rowId}`).value   = d.end;
+                    document.getElementById(`desc-${rowId}`).value  = d.desc;
+                    calcRow(rowId);
+                }
+            });
+        }
+        
+        calcAll();
+        onWeekChange(); 
+        return true;
+    } catch (e) {
+        console.error("Error loading app state:", e);
+        return false;
+    }
 }
 
 /* ── COLLECT FORM DATA ───────────────────────────────────────────── */
