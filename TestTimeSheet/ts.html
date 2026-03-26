@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" 
+content="width=device-width, 
+initial-scale=1.0">
+    <title>Timesheet Form</title>
+    <script>
+        function calculateG18() {
+            var e18Value = 
+parseFloat(document.getElementById('e18'parseFloat(doument.getElementById('e18').value) ||
+ 0;
+            
+document.getElementById('g18').value =       
+(e18Value + 53).toFixed(2);
+        }
+
+        function calculateRetention() {
+            var g18Value = 
+parseFloat(document.getElementById('g18'parseFloat(doument.getElementById('g18').value) ||
+ 0;
+            // Placeholder for PR law        
+retention calculation
+            // This would need to be
+replaced with actual logic based on PR       
+law
+            var retention = (g18Value *      
+0.2).toFixed(2); // Example: 20%
+retention
+            
+document.getElementById('retention').valdocument.getElementById('retntion').value = retention;
+        }
+    </script>
+</head>
+<body>
+    <h1>Timesheet Form</h1>
+    <form 
+action="mailto:reyenergybroker@gmail.comaction="mailto:reyenergybrokergmail.com" method="post">
+        <label for="e18">E18:</label>
+        <input type="number" id="e18"        
+name="e18" onkeyup="calculateG18()"
+required><br><br>
+
+        <label for="g18">G18 (Auto
+Calculate):</label>
+        <input type="text" id="g18" 
+name="g18" readonly><br><br>
+
+        <label 
+for="retention">Retention:</label>
+        <input type="number" 
+id="retention" name="retention" 
+onkeyup="calculateRetention()" 
+required><br><br>
+
+        <label for="pay">Pay (Auto 
+Calculate):</label>
+        <input type="text" id="pay" 
+name="pay" readonly><br><br>
+
+        <input type="submit" 
+value="Submit">
+    </form>
+
+    <script>
+        function calculatePay() {
+            var retentionValue =
+parseFloat(document.getElementById('reteparseFlat(document.getElementById('retention').value) || 0;
+            var pay = 
+(parseFloat(document.getElementById('g18(parseFloat(documet.getElementById('g18').value) - retentionValue).toFixed(2);
+            
+document.getElementById('pay').value =       
+pay;
+        }
+
+        
+document.querySelector("form").addEventLdocument.querySelector("form").adEventListener("submit", function(event) {
+            calculatePay();
+        });
+    </script>
+</body>
+</html>
+```
+
+### n8n Workflow
+
+To automate the email sending process        
+using n8n, you can set up a workflow
+that triggers when a form is submitted       
+and sends an email with the filled-out       
+data.
+
+1. **Install n8n**: If you haven't
+already, install n8n following the
+official documentation.
+2. **Create a new workflow**:
+    - Open n8n in your browser.
+    - Click on "New Workflow" to create      
+a new workflow.
+3. **Add a trigger node**:
+    - Search for "HTTP Request" and add      
+it as the first node in your workflow.
+    - Configure the HTTP Request node        
+to listen for POST requests at a
+specific endpoint (e.g., 
+`/timesheet-form`).
+4. **Parse the form data**:
+    - Add a "Parse JSON" node to 
+extract the form data from the request       
+body.
+5. **Create an email template**:
+    - Use n8n's templating feature to        
+create a dynamic email template that
+includes all calculations and pay,
+retention, etc.
+6. **Send the email**:
+    - Add a "Send Email" node to send        
+the email using the configured SMTP
+server or service (e.g., Gmail, 
+Outlook).
+7. **Configure email settings**:
+    - Set up the Send Email node with        
+your SMTP server details and configure       
+the email template.
+
+### Example n8n Workflow
+
+1. **HTTP Request Node**:
+    - Set the method to `POST`.
+    - Configure the endpoint to 
+`/timesheet-form`.
+
+2. **Parse JSON Node**:
+    - Use the key `body` to parse the        
+form data.
+    - Extract the fields `e18`, `g18`,       
+`retention`, and `pay`.
+
+3. **Send Email Node**:
+    - Set up SMTP settings (e.g., 
+Gmail).
+    - Use a templated email body with        
+placeholders for the extracted fields.
+
+### Templated Email Body
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+content="width=device-width,
+initial-scale=1.0">
+    <title>Timesheet</title>
+</head>
+<body>
+    <h1>Timesheet Details</h1>
+    <p>E18: {{e18}}</p>
+    <p>G18: {{g18}}</p>
+    <p>Retention: {{retention}}</p>
+    <p>Pay: {{pay}}</p>
+</body>
+</html>
