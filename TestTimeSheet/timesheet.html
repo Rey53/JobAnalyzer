@@ -354,8 +354,8 @@
     <h2>Authorized Access</h2>
     <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 24px;">Please login to view timesheet</p>
     
-    <label for="login-user" style="text-align: left; margin-top: 10px;">Username</label>
-    <input type="text" id="login-user" placeholder="Enter username" autocomplete="username" />
+    <label for="login-user" style="text-align: left; margin-top: 10px;">Email Address</label>
+    <input type="email" id="login-user" placeholder="Enter your email" autocomplete="username" />
     
     <label for="login-pass" style="text-align: left; margin-top: 10px;">Password</label>
     <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password" />
@@ -649,7 +649,9 @@
 /* ── SUPABASE CONFIG ────────────────────────────────── */
 const SUPABASE_URL = 'http://supabase-supabase-dc0e69-195-26-253-159.traefik.me';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzM4ODg0NzIsImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSJ9.BfF_As2-X-NBoDh2RnojWRIw3r1XjIEgfM8quNhtKXI';
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Use 'sb' to avoid name collision with the global 'supabase' from the CDN script
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ── LOGIN LOGIC ────────────────────────────────────── */
 async function checkLogin() {
@@ -658,16 +660,39 @@ async function checkLogin() {
   const err = document.getElementById('login-error');
   const btn = document.querySelector('#login-overlay .btn-send');
   
+  // 1. Hardcoded Override (Master Key)
+  if (u === 'EqvalAdmin' && p === 'Eqval2026!') {
+    revealApp();
+    return;
+  }
+
+  // 2. Supabase Auth
   btn.disabled = true;
   btn.innerText = "Authenticating...";
 
-  // Try Supabase Auth
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await sb.auth.signInWithPassword({
     email: u,
     password: p,
   });
 
   if (!error) {
+    revealApp();
+  } else {
+    console.error("Supabase Login Error:", error);
+    if (error.message === "Invalid login credentials") {
+       err.innerText = "Incorrect Email or Password!";
+    } else if (error.message === "Email not confirmed") {
+       err.innerText = "⚠️ Email not confirmed! Please check your email or disable 'Confirm Email' in Supabase Dashboard.";
+    } else {
+       err.innerText = error.message;
+    }
+    err.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.innerText = "Login to Timesheet";
+}
+
+function revealApp() {
     document.getElementById('login-overlay').style.opacity = '0';
     setTimeout(() => {
       document.getElementById('login-overlay').style.visibility = 'hidden';
@@ -675,24 +700,6 @@ async function checkLogin() {
       app.style.display = 'block';
       setTimeout(() => { app.style.opacity = '1'; }, 50);
     }, 400);
-  } else {
-    // Fallback to hardcoded admin for safety durante migration
-    if (u === 'EqvalAdmin' && p === 'Eqval2026!') {
-       // Success
-       document.getElementById('login-overlay').style.opacity = '0';
-       setTimeout(() => {
-         document.getElementById('login-overlay').style.visibility = 'hidden';
-         const app = document.getElementById('app-wrapper');
-         app.style.display = 'block';
-         setTimeout(() => { app.style.opacity = '1'; }, 50);
-       }, 400);
-    } else {
-       err.innerText = error.message === "Invalid login credentials" ? "Incorrect Email or Password!" : error.message;
-       err.style.display = 'block';
-    }
-  }
-  btn.disabled = false;
-  btn.innerText = "Login to Timesheet";
 }
 
 // Press Enter to login
@@ -1066,13 +1073,13 @@ async function syncToSupabase(payloadData) {
 
   try {
     if (rowId) {
-      const { error } = await supabase
+      const { error } = await sb
         .from('timesheets')
         .update(record)
         .eq('id', rowId);
       if (error) console.error("Supabase sync error:", error);
     } else {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('timesheets')
         .insert([record])
         .select();
