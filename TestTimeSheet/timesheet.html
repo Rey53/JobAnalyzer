@@ -75,7 +75,7 @@
     }
 
     /* ── MAIN WRAPPER ── */
-    .main { max-width: 100%; margin: 0 auto; padding: 28px 40px; }
+    .main { max-width: 1280px; margin: 0 auto; padding: 40px 60px; }
 
     /* ── SECTION CARD ── */
     .card {
@@ -170,7 +170,7 @@
 
     tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background .15s; }
     tbody tr:hover { background: rgba(255,255,255,.03); }
-    tbody td { padding: 10px 8px; text-align: center; vertical-align: middle; }
+    tbody td { padding: 14px 12px; text-align: center; vertical-align: middle; }
 
     .day-label {
       font-weight: 600; font-size: .82rem;
@@ -200,20 +200,20 @@
     /* ── TOTAL HOURS BANNER (Enhanced) ── */
     .total-banner {
       display: flex; align-items: center; justify-content: space-between;
-      flex-wrap: wrap; gap: 16px;
-      background: rgba(26, 29, 39, 0.85);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      flex-wrap: wrap; gap: 20px;
+      background: rgba(26, 29, 39, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--accent);
-      border-radius: var(--radius); padding: 22px 30px;
-      margin-bottom: 26px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+      border-radius: var(--radius); padding: 30px 40px;
+      margin-bottom: 35px;
+      box-shadow: 0 15px 50px rgba(0,0,0,0.6);
       position: sticky; top: 10px; z-index: 100;
       transition: all .3s ease;
     }
     .total-banner .label { font-size: .75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
     .total-banner .value { 
-      font-size: 2.8rem; font-weight: 900; line-height: 1;
+      font-size: 3.2rem; font-weight: 900; line-height: 1;
       background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       display: flex; align-items: baseline;
@@ -1226,15 +1226,28 @@ function calcRow(i) {
   let hours = 0;
   let isValid = true;
   
-  if (start !== null && end !== null && end > start) {
-    const worked = end - start;
-    let lunch = 0;
-    if (lout !== null && lin !== null && lin > lout && lout > start && lin < end) {
-      lunch = lin - lout;
-    }
-    hours = (worked - lunch) / 60;
-    if (hours < 0) hours = 0;
+  let amHours = 0;
+  let pmHours = 0;
+
+  // Scenario 1: Morning segment (Start to Lunch Out)
+  if (start !== null && lout !== null && lout > start) {
+    amHours = (lout - start);
+  } 
+  // Scenario 2: Afternoon segment (Lunch In to End)
+  if (lin !== null && end !== null && end > lin) {
+    pmHours = (end - lin);
   }
+  
+  // Scenario 3: Continuous day (Start to End without Lunch break recorded)
+  if (start !== null && end !== null && end > start && (lout === null || lin === null)) {
+    // If lunch is not fully specified, calculate continuous time
+    hours = (end - start) / 60;
+  } else {
+    // Sum up the segments
+    hours = (amHours + pmHours) / 60;
+  }
+
+  if (hours < 0) hours = 0;
   
   cell.textContent = hours.toFixed(2);
   cell.className = `hours-cell${hours === 0 ? ' zero' : ''}`;
