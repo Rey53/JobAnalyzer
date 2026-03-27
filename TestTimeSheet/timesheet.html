@@ -328,37 +328,128 @@
 
     /* ── PRINT STYLES ── */
     @media print {
-      body { background: #fff !important; color: #000 !important; padding: 0 !important; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body { background: #fff !important; color: #111 !important; padding: 0 !important; font-size: 11pt !important; }
       .hero { 
-        background: #fff !important; color: #000 !important; padding: 20px 10px !important; 
-        border-bottom: 2px solid #000 !important; margin-bottom: 15px !important;
+        background: #fff !important; color: #111 !important; padding: 16px 20px !important; 
+        border-bottom: 2px solid #333 !important; margin-bottom: 10px !important;
       }
-      .hero h1 span { -webkit-text-fill-color: #000 !important; background: none !important; }
-      .hero *, .hero-top * { color: #000 !important; }
-      .badge-pr, .logo-badge, .btn-send, .info-note, #toast, #login-overlay, .spinner, .dot { display: none !important; }
+      .hero::after { display: none !important; }
+      .hero h1 { font-size: 1.3rem !important; }
+      .hero h1 span { -webkit-text-fill-color: #111 !important; background: none !important; }
+      .hero *, .hero-top * { color: #111 !important; }
+      .hero p { color: #555 !important; }
+      .badge-pr, .logo-badge, .btn-send, .btn-logout, .info-note, #toast, #login-overlay, .spinner, .dot, .rollover-modal-overlay { display: none !important; }
       #app-wrapper { display: block !important; opacity: 1 !important; visibility: visible !important; }
+      .main { padding: 10px 20px !important; }
       .card { 
-        box-shadow: none !important; border: 1px solid #ccc !important; 
-        border-radius: 4px !important; margin-bottom: 15px !important; 
-        break-inside: avoid; background: #fff !important; 
+        box-shadow: none !important; border: 1px solid #bbb !important; 
+        border-radius: 4px !important; margin-bottom: 12px !important; 
+        break-inside: avoid; background: #fff !important; padding: 14px 16px !important;
       }
-      .total-banner { background: #f0f0f0 !important; border: 1px solid #000 !important; color: #000 !important; }
-      .total-banner .value { color: #000 !important; -webkit-text-fill-color: initial !important; }
-      .pay-item { border: 1px solid #ccc !important; transform: none !important; color: #000 !important; }
-      .pi-value { color: #000 !important; }
-      .wh-tag { background: #eee !important; color: #000 !important; border: 1px solid #ccc !important; }
+      .total-banner { background: #f5f5f5 !important; border: 1px solid #333 !important; color: #111 !important; padding: 12px 16px !important; }
+      .total-banner .label { color: #555 !important; }
+      .total-banner .value { color: #111 !important; -webkit-text-fill-color: initial !important; font-size: 1.6rem !important; }
+      .total-banner .value span { color: #555 !important; }
+      .pay-grid { gap: 8px !important; grid-template-columns: repeat(3, 1fr) !important; }
+      .pay-item { border: 1px solid #bbb !important; transform: none !important; background: #fff !important; padding: 10px 12px !important; }
+      .pay-item:hover { transform: none !important; }
+      .pi-label { color: #555 !important; }
+      .pi-value { color: #111 !important; font-size: 1.2rem !important; }
+      .pi-value.green { color: #15803d !important; }
+      .pi-value.red { color: #b91c1c !important; }
+      .pi-value.amber { color: #b45309 !important; }
+      .pi-sub { color: #777 !important; }
+      .wh-tag { background: #e5e7eb !important; color: #333 !important; border: 1px solid #ccc !important; }
+      /* Replace form elements with their text values */
+      .print-value { display: inline !important; font-weight: 600; color: #111; font-size: 13px; }
+      .print-hide { display: none !important; }
       input, select, textarea { 
-        border: none !important; background: transparent !important; color: #000 !important; 
-        padding: 0 !important; appearance: none !important; -webkit-appearance: none !important;
-        resize: none !important; font-size: 13px !important;
+        border: none !important; background: transparent !important; color: #111 !important; 
+        padding: 2px 0 !important; appearance: none !important; -webkit-appearance: none !important;
+        resize: none !important; font-size: 11pt !important; box-shadow: none !important;
+        overflow: visible !important; height: auto !important;
       }
-      th { background: #f0f0f0 !important; color: #000 !important; border-bottom: 2px solid #000 !important; padding: 6px !important; }
-      td { border-bottom: 1px solid #eee !important; padding: 6px !important; font-size: 12px !important; }
-      .hours-cell { color: #000 !important; font-weight: 800 !important; }
-      .section-title { color: #000 !important; border-bottom: 1px solid #eee !important; padding-bottom: 5px !important; }
-      .section-title::before { display: none; }
-      .pi-sub { color: #666 !important; }
+      select { -moz-appearance: none !important; text-indent: 0.01px !important; }
+      thead th { background: #e5e7eb !important; color: #111 !important; border-bottom: 2px solid #333 !important; padding: 6px 4px !important; font-size: 8pt !important; }
+      tbody td { border-bottom: 1px solid #ddd !important; padding: 5px 4px !important; font-size: 10pt !important; }
+      .hours-cell { color: #111 !important; font-weight: 800 !important; }
+      .hours-cell.zero { color: #999 !important; }
+      .section-title { color: #333 !important; border-bottom: 1px solid #ddd !important; padding-bottom: 5px !important; font-size: 9pt !important; }
+      .section-title::before { background: #333 !important; }
+      .wh-table tr td { font-size: 10pt !important; color: #111 !important; }
+      .wh-table .total-row td { border-top: 2px solid #333 !important; font-size: 11pt !important; }
+      .sig-grid { gap: 16px !important; }
+      .sig-grid label { color: #555 !important; }
+      /* Page layout */
+      @page { size: letter; margin: 0.5in; }
+      .comments-wrap { break-inside: avoid; }
     }
+
+    /* ── ROLLOVER PREVIEW MODAL ── */
+    .rollover-modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 99998; padding: 20px;
+      opacity: 0; visibility: hidden; transition: all .3s;
+    }
+    .rollover-modal-overlay.active { opacity: 1; visibility: visible; }
+    .rollover-modal {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px; width: 100%; max-width: 560px;
+      box-shadow: 0 12px 48px rgba(0,0,0,.6);
+      transform: translateY(20px); transition: transform .3s;
+    }
+    .rollover-modal-overlay.active .rollover-modal { transform: translateY(0); }
+    .rollover-modal h3 {
+      font-size: 1.2rem; font-weight: 800; margin-bottom: 6px;
+      background: linear-gradient(90deg, #6b8bff, #a78bfa);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .rollover-modal .modal-subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 24px; }
+    .rollover-preview-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;
+    }
+    .rollover-preview-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px 16px;
+    }
+    .rollover-preview-item .rp-label {
+      font-size: .68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--muted); margin-bottom: 6px;
+    }
+    .rollover-preview-item .rp-value {
+      font-size: 1.15rem; font-weight: 800; color: var(--text);
+    }
+    .rollover-preview-item .rp-value.green { color: var(--green); }
+    .rollover-preview-item .rp-value.purple { color: #818cf8; }
+    .rollover-preview-item .rp-value.amber { color: var(--amber); }
+    .rollover-arrow {
+      display: flex; align-items: center; gap: 8px; font-size: .82rem;
+      color: var(--muted); margin-bottom: 12px;
+    }
+    .rollover-arrow .from { color: var(--muted); }
+    .rollover-arrow .arrow { color: var(--accent); font-weight: 800; font-size: 1rem; }
+    .rollover-arrow .to { color: var(--green); font-weight: 700; }
+    .modal-actions {
+      display: flex; gap: 12px; margin-top: 8px;
+    }
+    .modal-actions button {
+      flex: 1; padding: 12px 20px; border-radius: 8px; font-family: inherit;
+      font-size: .9rem; font-weight: 700; cursor: pointer; border: none;
+      transition: all .2s;
+    }
+    .modal-btn-cancel {
+      background: var(--surface); border: 1px solid var(--border) !important;
+      color: var(--muted);
+    }
+    .modal-btn-cancel:hover { border-color: var(--accent) !important; color: var(--text); }
+    .modal-btn-confirm {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; box-shadow: 0 4px 16px rgba(79,110,247,.4);
+    }
+    .modal-btn-confirm:hover { opacity: .9; transform: translateY(-1px); }
   </style>
 </head>
 <body>
@@ -645,10 +736,10 @@
         <div class="spinner"></div>
         <span class="btn-label">✉️ &nbsp; Send Timesheet via n8n</span>
       </button>
-      <button class="btn-send" onclick="window.print()" style="flex:1; min-width:180px; background:var(--surface); border:1px solid var(--accent); color:#a5b4fc;">
+      <button class="btn-send" onclick="printTimesheet()" style="flex:1; min-width:180px; background:var(--surface); border:1px solid var(--accent); color:#a5b4fc;">
         <span class="btn-label">🖨️ &nbsp; Print &nbsp; / &nbsp; Save PDF</span>
       </button>
-      <button class="btn-send" onclick="startNextWeek()" style="flex:1; min-width:200px; background:var(--surface); border:1px solid #4f6ef7; color:#a5b4fc;">
+      <button class="btn-send" onclick="showRolloverPreview()" style="flex:1; min-width:200px; background:var(--surface); border:1px solid #4f6ef7; color:#a5b4fc;">
         <span class="btn-label">⏭️ &nbsp; Rollover Next Week</span>
       </button>
     </div>
@@ -656,6 +747,56 @@
 
 </div><!-- /main -->
 </div><!-- /app-wrapper -->
+
+<!-- Rollover Preview Modal -->
+<div class="rollover-modal-overlay" id="rollover-modal">
+  <div class="rollover-modal">
+    <h3>⏭️ Rollover to Next Week</h3>
+    <div class="modal-subtitle">Preview what will change when you advance to the next week.</div>
+    
+    <div class="rollover-arrow">
+      <span class="from" id="rv-week-from">Week of 03/30/2026</span>
+      <span class="arrow">→</span>
+      <span class="to" id="rv-week-to">Week of 04/06/2026</span>
+    </div>
+
+    <div class="rollover-preview-grid">
+      <div class="rollover-preview-item">
+        <div class="rp-label">Current Timesheet #</div>
+        <div class="rp-value" id="rv-ts-from">#1</div>
+      </div>
+      <div class="rollover-preview-item">
+        <div class="rp-label">Next Timesheet #</div>
+        <div class="rp-value green" id="rv-ts-to">#2</div>
+      </div>
+      <div class="rollover-preview-item">
+        <div class="rp-label">Current YTD Gross</div>
+        <div class="rp-value" id="rv-ytd-gross-from">$0.00</div>
+      </div>
+      <div class="rollover-preview-item">
+        <div class="rp-label">New YTD Gross (Rollover)</div>
+        <div class="rp-value purple" id="rv-ytd-gross-to">$0.00</div>
+      </div>
+      <div class="rollover-preview-item">
+        <div class="rp-label">Current YTD Net</div>
+        <div class="rp-value" id="rv-ytd-net-from">$0.00</div>
+      </div>
+      <div class="rollover-preview-item">
+        <div class="rp-label">New YTD Net (Rollover)</div>
+        <div class="rp-value purple" id="rv-ytd-net-to">$0.00</div>
+      </div>
+    </div>
+
+    <div style="background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.25); border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:.82rem; color:#fbbf24;">
+      ⚠️ This will <strong>clear all time entries</strong>, advance the week date by 7 days, increment the timesheet number, and roll your YTD values forward.
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="closeRolloverPreview()">Cancel</button>
+      <button class="modal-btn-confirm" onclick="confirmRollover()">✅ Confirm Rollover</button>
+    </div>
+  </div>
+</div>
 
 <!-- Toast -->
 <div id="toast"></div>
@@ -906,9 +1047,58 @@ function onWeekChange() {
   calcAll();
 }
 
-function startNextWeek() {
-  if (!confirm('Are you sure you want to rollover to the next week? This will clear current hours and advance your YTD accumulations.')) return;
+/* ── ROLLOVER PREVIEW ───────────────────────────────────────── */
+function showRolloverPreview() {
+  const fmt = (n) => `$${Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
   
+  // Current week info
+  const weekVal = document.getElementById('week-start').value;
+  const tsNum = parseInt(document.getElementById('ts-number').value, 10) || 0;
+  
+  // Current YTD
+  const prevYtdGross = parseFloat(document.getElementById('prev-ytd-gross').value) || 0;
+  const prevYtdNet = parseFloat(document.getElementById('prev-ytd-net').value) || 0;
+  
+  // New YTD (after this week's work)
+  const newGrossStr = document.getElementById('ytd-new-gross').textContent.replace(/[^0-9.-]/g, '');
+  const newNetStr = document.getElementById('ytd-new-net').textContent.replace(/[^0-9.-]/g, '');
+  const newYtdGross = parseFloat(newGrossStr) || 0;
+  const newYtdNet = parseFloat(newNetStr) || 0;
+  
+  // Week dates
+  if (weekVal) {
+    const currMonday = new Date(weekVal + 'T00:00:00');
+    const nextMonday = new Date(currMonday);
+    nextMonday.setDate(currMonday.getDate() + 7);
+    const currSunday = new Date(currMonday); currSunday.setDate(currMonday.getDate() + 6);
+    const nextSunday = new Date(nextMonday); nextSunday.setDate(nextMonday.getDate() + 6);
+    const dfmt = (d) => d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    document.getElementById('rv-week-from').textContent = `${dfmt(currMonday)} – ${dfmt(currSunday)}`;
+    document.getElementById('rv-week-to').textContent = `${dfmt(nextMonday)} – ${dfmt(nextSunday)}`;
+  }
+  
+  // Populate preview
+  document.getElementById('rv-ts-from').textContent = `#${tsNum}`;
+  document.getElementById('rv-ts-to').textContent = `#${tsNum + 1}`;
+  document.getElementById('rv-ytd-gross-from').textContent = fmt(prevYtdGross);
+  document.getElementById('rv-ytd-gross-to').textContent = fmt(newYtdGross);
+  document.getElementById('rv-ytd-net-from').textContent = fmt(prevYtdNet);
+  document.getElementById('rv-ytd-net-to').textContent = fmt(newYtdNet);
+  
+  // Show modal
+  document.getElementById('rollover-modal').classList.add('active');
+}
+
+function closeRolloverPreview() {
+  document.getElementById('rollover-modal').classList.remove('active');
+}
+
+function confirmRollover() {
+  closeRolloverPreview();
+  executeRollover();
+}
+
+function executeRollover() {
   // 1. Roll over YTD
   const newGrossStr = document.getElementById('ytd-new-gross').textContent.replace(/[^0-9.-]/g, '');
   const newNetStr   = document.getElementById('ytd-new-net').textContent.replace(/[^0-9.-]/g, '');
@@ -948,8 +1138,12 @@ function startNextWeek() {
   // Clear Supabase Row ID to create a new record for the new week
   localStorage.removeItem('supabase_row_id');
 
+  showToast('✅ Rolled over to next week successfully!', 'success');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+// Keep legacy function for backwards compat
+function startNextWeek() { showRolloverPreview(); }
 
 function syncDates(idx) {
   // If user changes Monday's date in the table directly, update the week-start and re-cascade
@@ -1496,6 +1690,43 @@ function showToast(msg, type='') {
   t.className = `show ${type}`;
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => { t.className = ''; }, 4000);
+}
+
+/* ── PRINT / SAVE PDF ───────────────────────────────── */
+function printTimesheet() {
+  // Convert select elements to visible text spans for printing
+  const selects = document.querySelectorAll('#ts-table select');
+  const printSpans = [];
+  
+  selects.forEach(sel => {
+    const span = document.createElement('span');
+    span.className = 'print-value';
+    // Convert 24h to 12h AM/PM for display
+    const val = sel.value;
+    if (val) {
+      const [h, m] = val.split(':').map(Number);
+      const isPm = h >= 12;
+      let dispH = h % 12; if (dispH === 0) dispH = 12;
+      span.textContent = `${dispH}:${m.toString().padStart(2, '0')} ${isPm ? 'PM' : 'AM'}`;
+    } else {
+      span.textContent = '—';
+    }
+    span.style.display = 'none'; // Hidden on screen
+    sel.parentNode.insertBefore(span, sel.nextSibling);
+    sel.classList.add('print-hide');
+    printSpans.push({ sel, span });
+  });
+  
+  // Trigger print
+  window.print();
+  
+  // Cleanup after print dialog closes
+  setTimeout(() => {
+    printSpans.forEach(({ sel, span }) => {
+      sel.classList.remove('print-hide');
+      span.remove();
+    });
+  }, 1000);
 }
 </script>
 </body>

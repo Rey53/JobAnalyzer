@@ -1,86 +1,56 @@
 {
-  "name": "Timesheet Webhook -> Supabase -> Gmail",
+  "name": "Production - Timesheet Webhook -> Gmail",
+  "id": "4Zaa39oJeju2XhFi",
+  "active": true,
   "nodes": [
     {
+      "id": "webhook-prod",
+      "name": "Webhook",
       "parameters": {
         "httpMethod": "POST",
-        "path": "timesheet-send",
-        "responseMode": "lastNode",
-        "options": {}
-      },
-      "id": "webhook-node",
-      "name": "Webhook",
-      "position": [-48, 0],
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "webhookId": "01628619-1488-4700-a9b5-4024871cc7e9"
-    },
-    {
-      "parameters": {
-        "tableId": "timesheets",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "payload",
-              "fieldValue": "={{ JSON.stringify($json.body) }}"
-            }
-          ]
-        }
-      },
-      "id": "supabase-node",
-      "name": "Supabase Insert",
-      "position": [208, 0],
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "credentials": {
-        "supabaseApi": {
-          "id": "K6wacLKeTTr3OIwd",
-          "name": "Supabase account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "sendTo": "reyenergybroker@gmail.com",
-        "subject": "=[Timesheet] {{ $node[\"Webhook\"].json[\"body\"][\"professionalName\"] }} - {{ $node[\"Webhook\"].json[\"body\"][\"weekStart\"] }}",
-        "message": "={{ $node[\"Webhook\"].json[\"body\"][\"emailHtml\"] }}",
         "options": {
-          "ccList": "={{ $node[\"Webhook\"].json[\"body\"][\"ccEmail\"] }}"
-        }
+          "allowedOrigins": "*"
+        },
+        "path": "timesheet-send",
+        "responseMode": "lastNode"
       },
-      "id": "gmail-node",
-      "name": "Send Gmail",
-      "position": [400, 0],
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2,
-      "webhookId": "2a2b8dc4-b29d-4ae2-ab3b-6450c29e7352",
+      "position": [0, 0],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2
+    },
+    {
       "credentials": {
         "gmailOAuth2": {
           "id": "zeTsYcO85tl5Bjea",
           "name": "Gmail account"
         }
-      }
+      },
+      "id": "gmail-prod",
+      "name": "Send Gmail",
+      "parameters": {
+        "message": "={{ $json.body.emailHtml }}",
+        "options": {
+          "ccList": "={{ $json.body.ccEmail }}"
+        },
+        "sendTo": "reyenergybroker@gmail.com",
+        "subject": "=[Timesheet] {{ $json.body.professionalName }} - {{ $json.body.weekStart }}"
+      },
+      "position": [300, 0],
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2
     }
   ],
   "connections": {
+    "Send Gmail": {
+      "main": [[]]
+    },
     "Webhook": {
       "main": [
         [
           {
-            "node": "Supabase Insert",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase Insert": {
-      "main": [
-        [
-          {
+            "index": 0,
             "node": "Send Gmail",
-            "type": "main",
-            "index": 0
+            "type": "main"
           }
         ]
       ]
@@ -91,10 +61,6 @@
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
     "saveManualExecutions": true,
-    "saveExecutionProgress": true,
-    "callerPolicy": "workflowsFromSameOwner"
-  },
-  "meta": {
-    "templateCredsSetupCompleted": true
+    "saveExecutionProgress": true
   }
 }
