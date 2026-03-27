@@ -132,21 +132,45 @@
     select option { background: var(--surface); }
 
     /* ── TIME TABLE ── */
-    .time-table-wrap { overflow-x: auto; }
+    .time-table-wrap { overflow-x: auto; position: relative; border-radius: 8px; }
     table {
       width: 100%; border-collapse: collapse; font-size: .83rem;
+      table-layout: fixed; /* Ensures sticky alignment */
     }
     thead th {
       background: var(--surface); color: var(--muted);
       font-size: .7rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .8px; padding: 10px 8px; text-align: center;
+      letter-spacing: .8px; padding: 12px 8px; text-align: center;
       border-bottom: 2px solid var(--border);
     }
-    thead th:first-child { text-align: left; }
+    
+    /* Column Widths */
+    #ts-table th:nth-child(1) { width: 120px; text-align: left; } /* Day */
+    #ts-table th:nth-child(2) { width: 90px; }  /* Hours - Prominent */
+    #ts-table th:nth-child(3) { width: 130px; } /* Date */
+    #ts-table th:nth-child(4), #ts-table th:nth-child(5), #ts-table th:nth-child(6), #ts-table th:nth-child(7) { width: 105px; } /* Times */
+    #ts-table th:nth-child(8) { min-width: 200px; text-align: left; } /* Description */
+
+    /* Sticky Day Column */
+    #ts-table th:first-child,
+    #ts-table td:first-child {
+      position: sticky; left: 0; z-index: 20;
+      background: var(--surface); border-right: 1px solid var(--border);
+    }
+    #ts-table td:first-child { background: var(--card); }
+
+    /* Sticky Result Column (Hours) */
+    #ts-table th:nth-child(2),
+    #ts-table td:nth-child(2) {
+      position: sticky; left: 120px; z-index: 10;
+      background: var(--surface); border-right: 2px solid var(--border);
+      box-shadow: 4px 0 10px rgba(0,0,0,0.2);
+    }
+    #ts-table td:nth-child(2) { background: rgba(30, 36, 60, 0.95); backdrop-filter: blur(4px); }
+
     tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background .15s; }
     tbody tr:hover { background: rgba(255,255,255,.03); }
-    tbody td { padding: 8px 6px; text-align: center; vertical-align: middle; }
-    tbody td:first-child { text-align: left; }
+    tbody td { padding: 10px 8px; text-align: center; vertical-align: middle; }
 
     .day-label {
       font-weight: 600; font-size: .82rem;
@@ -159,32 +183,42 @@
     .dot.weekend { background: var(--muted); }
 
     .hours-cell {
-      font-weight: 700; font-size: 1rem;
-      color: var(--green);
+      font-weight: 800; font-size: 1.15rem;
+      color: var(--green); text-shadow: 0 0 10px rgba(34,197,94,0.3);
     }
-    .hours-cell.zero { color: var(--muted); }
+    .hours-cell.zero { color: var(--muted); opacity: 0.5; text-shadow: none; }
 
     table select {
-      width: 110px; padding: 6px 0px; text-align: center; cursor: pointer;
+      width: 100%; max-width: 95px; padding: 7px 4px; text-align: center; cursor: pointer;
     }
-    table input[type=date] { width: 130px; padding: 6px 8px; }
+    table input[type=date] { width: 100%; max-width: 120px; padding: 7px 8px; }
     table textarea {
-      min-height: 40px; font-size: .78rem; padding: 6px 8px;
-      width: 100%; min-width: 180px;
+      min-height: 42px; font-size: .78rem; padding: 8px;
+      width: 100%; min-width: 200px;
     }
 
-    /* ── TOTAL HOURS BANNER ── */
+    /* ── TOTAL HOURS BANNER (Enhanced) ── */
     .total-banner {
       display: flex; align-items: center; justify-content: space-between;
-      flex-wrap: wrap; gap: 12px;
-      background: linear-gradient(135deg, rgba(79,110,247,.12), rgba(124,90,247,.08));
-      border: 1px solid rgba(79,110,247,.3);
-      border-radius: var(--radius); padding: 18px 24px;
-      margin-bottom: 20px;
+      flex-wrap: wrap; gap: 16px;
+      background: rgba(26, 29, 39, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius); padding: 22px 30px;
+      margin-bottom: 26px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+      position: sticky; top: 10px; z-index: 100;
+      transition: all .3s ease;
     }
-    .total-banner .label { font-size: .8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .8px; }
-    .total-banner .value { font-size: 2.4rem; font-weight: 800; color: #fff; line-height: 1; }
-    .total-banner .value span { font-size: 1rem; color: var(--muted); margin-left: 4px; }
+    .total-banner .label { font-size: .75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .total-banner .value { 
+      font-size: 2.8rem; font-weight: 900; line-height: 1;
+      background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      display: flex; align-items: baseline;
+    }
+    .total-banner .value span { font-size: 1.1rem; color: var(--muted); -webkit-text-fill-color: var(--muted); margin-left: 6px; font-weight: 600; }
 
     /* ── PAY SUMMARY CARDS ── */
     .pay-grid {
@@ -534,6 +568,18 @@
     </div>
   </div>
 
+  <!-- ████ SECTION 3 – PAY SUMMARY (MOVED UP FOR VISIBILITY) ████ -->
+  <div class="total-banner">
+    <div>
+      <div class="label">Total Hours This Week</div>
+      <div class="value" id="banner-hours">0.00 <span>hrs</span></div>
+    </div>
+    <div style="text-align:right">
+      <div class="label">Gross Pay (TOTAL HOURS × Rate)</div>
+      <div class="value" id="banner-gross" style="background:linear-gradient(90deg,#818cf8,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">$0.00</div>
+    </div>
+  </div>
+
   <!-- ████ SECTION 2 – DAILY TIME ENTRIES ████ -->
   <div class="card">
     <div class="section-title" style="justify-content:space-between">
@@ -545,12 +591,12 @@
         <thead>
           <tr>
             <th>Day</th>
+            <th>Hours</th>
             <th>Date</th>
             <th>Start</th>
             <th>Lunch Out</th>
             <th>Lunch In</th>
             <th>End</th>
-            <th>Hours</th>
             <th style="min-width:200px;text-align:left">Work Description</th>
           </tr>
         </thead>
@@ -559,24 +605,12 @@
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="6" style="text-align:right;font-size:.78rem;font-weight:700;color:var(--muted);padding:12px 6px;letter-spacing:.5px;text-transform:uppercase;">TOTAL HOURS</td>
-            <td id="total-hours-cell" style="text-align:center;font-size:1.3rem;font-weight:800;color:var(--green);padding:12px 6px;">0.00</td>
-            <td></td>
+            <td style="text-align:right;font-size:.72rem;font-weight:700;color:var(--muted);padding:12px 6px;text-transform:uppercase;">TOTAL</td>
+            <td id="total-hours-cell" style="text-align:center;font-size:1.4rem;font-weight:900;color:var(--green);padding:12px 6px;">0.00</td>
+            <td colspan="6"></td>
           </tr>
         </tfoot>
       </table>
-    </div>
-  </div>
-
-  <!-- ████ SECTION 3 – PAY SUMMARY ████ -->
-  <div class="total-banner">
-    <div>
-      <div class="label">Total Hours This Week</div>
-      <div class="value" id="banner-hours">0.00 <span>hrs</span></div>
-    </div>
-    <div style="text-align:right">
-      <div class="label">Gross Pay (TOTAL HOURS × Rate)</div>
-      <div class="value" id="banner-gross" style="color:#818cf8;">$0.00</div>
     </div>
   </div>
 
@@ -982,12 +1016,12 @@ function buildTable() {
           <span id="day-name-${i}">${day}</span>
         </div>
       </td>
+      <td class="hours-cell zero" id="hrs-${i}">0.00</td>
       <td><input type="date" id="date-${i}" onchange="syncDates(${i})" /></td>
       <td><select id="start-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '08:00')}</select></td>
       <td><select id="lout-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '12:00', isWeekend ? '' : '08:00')}</select></td>
       <td><select id="lin-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '13:00', isWeekend ? '' : '12:00')}</select></td>
       <td><select id="end-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '17:00', isWeekend ? '' : '13:00')}</select></td>
-      <td class="hours-cell zero" id="hrs-${i}">0.00</td>
       <td><textarea id="desc-${i}" rows="2" placeholder="Work performed…" oninput="saveAppState()"></textarea></td>
     `;
     tbody.appendChild(row);
@@ -1007,7 +1041,11 @@ function buildTable() {
     document.getElementById(`desc-${i}`).value = d;
   });
 
-  calcAll();
+  // After building the table, trigger calculation for all rows 
+  // to ensure default times (like 08:00 - 17:00) are computed.
+  for (let i = 0; i < 7; i++) {
+    calcRow(i);
+  }
 }
 
 /* ── WEEK DATE SYNC ───────────────────────────────────────────── */
@@ -1457,12 +1495,12 @@ function buildEmailHtml(d) {
   const rows = d.days.map(r => `
     <tr style="border-bottom:1px solid #2e3350;">
       <td style="padding:8px 10px;font-weight:600;color:#e8eaf2;">${r.day}</td>
+      <td style="padding:8px 10px;font-weight:700;color:${r.hours > 0 ? '#22c55e' : '#8891b4'};">${r.hours.toFixed(2)}</td>
       <td style="padding:8px 10px;color:#8891b4;">${r.date || '—'}</td>
       <td style="padding:8px 10px;color:#8891b4;">${r.start || '—'}</td>
       <td style="padding:8px 10px;color:#8891b4;">${r.lunchOut || '—'}</td>
       <td style="padding:8px 10px;color:#8891b4;">${r.lunchIn || '—'}</td>
       <td style="padding:8px 10px;color:#8891b4;">${r.end || '—'}</td>
-      <td style="padding:8px 10px;font-weight:700;color:${r.hours > 0 ? '#22c55e' : '#8891b4'};">${r.hours.toFixed(2)}</td>
       <td style="padding:8px 10px;color:#8891b4;font-size:12px;">${r.desc || ''}</td>
     </tr>`).join('');
 
@@ -1519,21 +1557,21 @@ function buildEmailHtml(d) {
       <thead>
         <tr style="background:#20243a;">
           <th style="padding:10px 20px;color:#8891b4;text-align:left;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Day</th>
+          <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Hours</th>
           <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Date</th>
           <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Start</th>
           <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Lch Out</th>
           <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Lch In</th>
           <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">End</th>
-          <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Hours</th>
           <th style="padding:10px 20px;color:#8891b4;font-size:10px;text-transform:uppercase;text-align:left;border-bottom:1px solid #2e3350;">Description</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
       <tfoot>
         <tr style="background:#1e2540;">
-          <td colspan="6" style="padding:16px 20px;text-align:right;color:#8891b4;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">TOTAL WEEKLY HOURS</td>
+          <td style="padding:16px 20px;text-align:right;color:#8891b4;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">TOTAL WEEKLY HOURS</td>
           <td style="padding:16px 10px;text-align:center;font-size:18px;font-weight:800;color:#22c55e;">${d.totalHours}</td>
-          <td></td>
+          <td colspan="6"></td>
         </tr>
       </tfoot>
     </table>
