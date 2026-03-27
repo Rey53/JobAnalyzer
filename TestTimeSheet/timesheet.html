@@ -274,6 +274,23 @@
       padding: 4px 12px; border-radius: 999px; margin-left: 8px;
     }
 
+    .btn-logout {
+      margin-left: 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      font-size: .7rem; font-weight: 700;
+      padding: 5px 14px; border-radius: 999px;
+      cursor: pointer;
+      text-transform: uppercase; letter-spacing: 1px;
+      transition: all .2s;
+    }
+    .btn-logout:hover {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+    }
+
     /* ── SPINNER ── */
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
@@ -379,6 +396,7 @@
       <p>MiniMed Personal · Professional Services</p>
     </div>
     <div class="badge-pr">🇵🇷 Puerto Rico · PR Tax Withholding</div>
+    <button class="btn-logout" onclick="logout()">Logout</button>
   </div>
 </div>
 
@@ -702,6 +720,21 @@ function revealApp() {
     }, 400);
 }
 
+async function logout() {
+  if (!confirm('Are you sure you want to logout?')) return;
+  await sb.auth.signOut();
+  const app = document.getElementById('app-wrapper');
+  app.style.opacity = '0';
+  setTimeout(() => {
+    app.style.display = 'none';
+    const login = document.getElementById('login-overlay');
+    login.style.visibility = 'visible';
+    login.style.opacity = '1';
+    // Optional: Clear sensitive local fields but keep YTD
+    document.getElementById('login-pass').value = '';
+  }, 400);
+}
+
 // Press Enter to login
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && document.getElementById('login-overlay').style.visibility !== 'hidden') {
@@ -743,8 +776,14 @@ function setDefaults() {
   monday.setDate(today.getDate() + (dayOfWeek === 1 ? 0 : diff));
   // Baseline: March 30, 2026 as Week 1
   const baseline = '2026-03-30';
-  const savedTs = localStorage.getItem('tsNumber') || '1';
-  document.getElementById('ts-number').value = savedTs;
+  const savedTs = localStorage.getItem('tsNumber');
+  
+  if (!savedTs) {
+    document.getElementById('ts-number').value = '1';
+    localStorage.setItem('tsNumber', '1');
+  } else {
+    document.getElementById('ts-number').value = savedTs;
+  }
 
   const savedWeek = localStorage.getItem('minimed_app_state') ? 
     JSON.parse(localStorage.getItem('minimed_app_state')).weekStart : baseline;
