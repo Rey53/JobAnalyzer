@@ -1,133 +1,100 @@
 {
-  "name": "Timesheet Email Sender — MiniMed Personal",
+  "name": "Timesheet Webhook -> Supabase -> Gmail",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "timesheet-send",
-        "responseMode": "onReceived",
-        "responseData": "firstEntryJson",
-        "responseCode": 200,
-        "options": {
-          "allowedOrigins": "*"
-        }
+        "responseMode": "lastNode",
+        "options": {}
       },
       "id": "webhook-node",
-      "name": "Webhook — Receive Timesheet",
+      "name": "Webhook",
+      "position": [-48, 0],
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [240, 300],
-      "webhookId": "timesheet-send"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Build email subject and validate payload\nconst data = $input.first().json.body;\n\nconst subject = `[Timesheet] ${data.professionalName || 'Professional'} — Week of ${data.weekStart || 'N/A'}`;\n\nconst totalHrsNum = parseFloat(data.totalHours) || 0;\n\nreturn [{\n  json: {\n    ...data,\n    emailSubject: subject,\n    totalHoursNum: totalHrsNum,\n    isValid: !!(data.professionalName && data.weekStart && data.recipientEmail)\n  }\n}];\n"
-      },
-      "id": "code-node",
-      "name": "Prepare & Validate Data",
-      "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "webhookId": "01628619-1488-4700-a9b5-4024871cc7e9"
     },
     {
       "parameters": {
-        "conditions": {
-          "boolean": [
+        "tableId": "timesheets",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "value1": "={{ $json.isValid }}",
-              "value2": true
+              "fieldId": "payload",
+              "fieldValue": "={{ JSON.stringify($json.body) }}"
             }
           ]
         }
       },
-      "id": "if-valid",
-      "name": "Is Valid?",
-      "type": "n8n-nodes-base.if",
+      "id": "supabase-node",
+      "name": "Supabase Insert",
+      "position": [208, 0],
+      "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
-      "position": [680, 300]
-    },
-    {
-      "parameters": {
-        "fromEmail": "noreply@servicioxpert.com",
-        "toEmail": "={{ $json.recipientEmail }}",
-        "ccEmail": "={{ $json.ccEmail || '' }}",
-        "subject": "={{ $json.emailSubject }}",
-        "emailType": "html",
-        "message": "={{ $json.emailHtml }}",
-        "options": {
-          "replyTo": "={{ $json.recipientEmail }}"
-        }
-      },
-      "id": "email-node",
-      "name": "Send Timesheet Email",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2,
-      "position": [900, 200],
       "credentials": {
-        "smtp": {
-          "id": "smtp-cred",
-          "name": "SMTP — ServiceXpert"
+        "supabaseApi": {
+          "id": "K6wacLKeTTr3OIwd",
+          "name": "Supabase account"
         }
       }
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={ \"success\": true, \"message\": \"Timesheet sent to {{ $('Prepare & Validate Data').first().json.recipientEmail }}\", \"timestamp\": \"{{ new Date().toISOString() }}\" }"
-      },
-      "id": "respond-ok",
-      "name": "Respond — Success",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [1120, 200]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{ \"success\": false, \"error\": \"Missing required fields: professionalName, weekStart, or recipientEmail\" }",
+        "sendTo": "reyenergybroker@gmail.com",
+        "subject": "=[Timesheet] {{ $node[\"Webhook\"].json[\"body\"][\"professionalName\"] }} - {{ $node[\"Webhook\"].json[\"body\"][\"weekStart\"] }}",
+        "message": "={{ $node[\"Webhook\"].json[\"body\"][\"emailHtml\"] }}",
         "options": {
-          "responseCode": 400
+          "ccList": "={{ $node[\"Webhook\"].json[\"body\"][\"ccEmail\"] }}"
         }
       },
-      "id": "respond-err",
-      "name": "Respond — Validation Error",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [900, 420]
+      "id": "gmail-node",
+      "name": "Send Gmail",
+      "position": [400, 0],
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "webhookId": "2a2b8dc4-b29d-4ae2-ab3b-6450c29e7352",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "zeTsYcO85tl5Bjea",
+          "name": "Gmail account"
+        }
+      }
     }
   ],
   "connections": {
-    "Webhook — Receive Timesheet": {
+    "Webhook": {
       "main": [
-        [{ "node": "Prepare & Validate Data", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Supabase Insert",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Prepare & Validate Data": {
+    "Supabase Insert": {
       "main": [
-        [{ "node": "Is Valid?", "type": "main", "index": 0 }]
-      ]
-    },
-    "Is Valid?": {
-      "main": [
-        [{ "node": "Send Timesheet Email", "type": "main", "index": 0 }],
-        [{ "node": "Respond — Validation Error", "type": "main", "index": 0 }]
-      ]
-    },
-    "Send Timesheet Email": {
-      "main": [
-        [{ "node": "Respond — Success", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Send Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
   "settings": {
     "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
     "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromAList"
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner"
   },
-  "staticData": {},
-  "tags": ["timesheet", "email", "miniMed", "puertoRico"],
   "meta": {
-    "description": "Receives timesheet data from the HTML form via webhook and sends a rich HTML email with PR tax withholding breakdown to reyenergybroker@gmail.com",
-    "version": "1.0.0"
+    "templateCredsSetupCompleted": true
   }
 }

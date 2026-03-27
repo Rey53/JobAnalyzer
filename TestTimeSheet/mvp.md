@@ -25,7 +25,7 @@
 - Support for detailed daily task descriptions.
 
 **4. Financial & Tax Engine**
-- **Rate:** Flat $53.00/hr.
+- **Rate:** Flat $53.00/hr (Calculated internally, **hidden** from UI labels).
 - **Hacienda (PR) Withholding:** 10% applied strictly on accumulated income beyond the first $500 exemption threshold.
 - **Federal Withholdings:** Social Security (12.4%) and Medicare (2.9%) applied to Gross Pay.
 - **YTD Tracking:** Local Storage-based caching to track Accumulated Gross and Accumulated Net Pay across submittals securely.
@@ -43,8 +43,7 @@
 *   *Iteration 4:* Creating the n8n webhook payload pipeline, resolving schema formatting errors.
 *   *Iteration 5:* Hardening security with overlay authentication and locking down static variables.
 
-## Future MVP Expansions (Phase 2 - Optional)
-- **Database Scaling:** Migrate YTD data from `localStorage` into persistent `Supabase` records tied to sessions.
-- **Authentication Scaling:** Implement OAuth or Supabase Auth to replace the hardcoded front-end layer.
+- **Database Scaling:** COMPLETED. Migrated YTD data from `localStorage` into persistent `Supabase` records tied to sessions.
+- **Authentication Scaling:** COMPLETED. Implemented Supabase Auth to replace the hardcoded front-end layer.
 - **PDF Generation:** Add the ability to generate and export signed PDF timesheets instantly via the UI.
 - **Approvals Workflow:** In-app Supervisor sign-off interface instead of static email dispatch.

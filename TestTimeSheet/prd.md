@@ -29,7 +29,7 @@ Deliver a frictionless, 24/7 accessible web application that:
 - **Visuals:** Visual indicators (Green/Red/Warning) when hours are calculated vs missing.
 
 ### 4.3. Financial Calculator (Rules Engine)
-- **Gross Calculation:** `Total Hours x Standard Contract Rate ($53/hr)`.
+- **Gross Calculation:** `Total Hours x Rate` (Note: $53/hr is used for internal calculation but is **hidden** in UI labels).
 - **Hacienda Rule (PR):** 10% retention. Critical exception: The first $500 of YTD accumulated Gross Pay is completely exempt from the 10% retention.
 - **Federal Rule:** 12.4% strictly for Social Security. 2.9% strictly for Medicare. Applied flatly to overall Gross.
 - **Persistence:** Local Storage must track `Previous YTD Gross`, `Previous YTD Net`, `Current Timesheet Number`.
