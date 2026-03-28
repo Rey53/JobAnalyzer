@@ -31,16 +31,35 @@ function App() {
     loading 
   } = useTimesheet();
 
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [loginForm, setLoginForm] = useState({ user: '', pass: '' });
-  const [loginError, setLoginError] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  const checkLogin = () => {
+  const checkLogin = async () => {
+    setLoginError(false);
+    
+    // 1. MASTER KEY OVERRIDE
     if ((loginForm.user === 'EqvalAdmin' && loginForm.pass === 'Eqval2026!') || 
         (loginForm.user === 'reyenergybroker@gmail.com' && loginForm.pass === 'Eqval2026!')) {
       setLoggedIn(true);
-    } else {
+      return;
+    }
+
+    // 2. SUPABASE REAL AUTH
+    setIsAuthLoading(true);
+    try {
+      const { data, error } = await import('./lib/supabase').then(m => m.supabase.auth.signInWithPassword({
+        email: loginForm.user,
+        password: loginForm.pass
+      }));
+
+      if (error) throw error;
+      if (data?.user) {
+        setLoggedIn(true);
+      }
+    } catch (e) {
+      console.error("Login Error:", e.message);
       setLoginError(true);
+    } finally {
+      setIsAuthLoading(false);
     }
   };
 
@@ -76,8 +95,13 @@ function App() {
             />
           </div>
 
-          <button className="btn-primary" onClick={checkLogin} style={{ width: '100%' }}>
-            Login to Timesheet
+          <button 
+            className="btn-primary" 
+            onClick={checkLogin} 
+            disabled={isAuthLoading}
+            style={{ width: '100%' }}
+          >
+            {isAuthLoading ? 'Authenticating...' : 'Login to Timesheet'}
           </button>
           
           <AnimatePresence>
