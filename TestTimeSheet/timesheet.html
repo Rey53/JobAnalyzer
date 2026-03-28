@@ -207,8 +207,9 @@
       border: 1px solid var(--accent);
       border-radius: var(--radius); padding: 30px 40px;
       margin-bottom: 35px;
-      box-shadow: 0 15px 50px rgba(0,0,0,0.6);
-      position: sticky; top: 10px; z-index: 100;
+      -webkit-background-clip: padding-box;
+      background-clip: padding-box;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); top: 10px; z-index: 100;
       transition: all .3s ease;
     }
     .total-banner .label { font-size: .75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
@@ -400,7 +401,10 @@
       .print-hide { display: none !important; }
       input, select, textarea { 
         border: none !important; background: transparent !important; color: #111 !important; 
-        padding: 2px 0 !important; appearance: none !important; -webkit-appearance: none !important;
+        padding: 2px 0 !important; -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  cursor: pointer; -webkit-appearance: none !important;
         resize: none !important; font-size: 11pt !important; box-shadow: none !important;
         overflow: visible !important; height: auto !important;
       }
@@ -869,7 +873,13 @@ async function checkLogin() {
   });
 
   if (!error) {
+    // 3. Clear existing states before loading from cloud
+    localStorage.removeItem('supabase_row_id');
+    localStorage.removeItem('minimed_app_state');
+    
+    // 4. Reveal App and Sync from Cloud
     revealApp();
+    await fetchFromSupabase(u); 
   } else {
     console.error("Supabase Login Error:", error);
     if (error.message === "Invalid login credentials") {
@@ -897,7 +907,17 @@ function revealApp() {
 
 async function logout() {
   if (!confirm('Are you sure you want to logout?')) return;
+  
+  // Save one last time and await it
+  showToast('💾 Saving final state...', 'success');
+  await saveAppState(); 
+  
   await sb.auth.signOut();
+  
+  // Clear persistent local state identifiers to avoid leaking to next logged-in user
+  localStorage.removeItem('supabase_row_id');
+  localStorage.removeItem('minimed_app_state');
+  
   const app = document.getElementById('app-wrapper');
   app.style.opacity = '0';
   setTimeout(() => {
@@ -905,8 +925,10 @@ async function logout() {
     const login = document.getElementById('login-overlay');
     login.style.visibility = 'visible';
     login.style.opacity = '1';
-    // Optional: Clear sensitive local fields but keep YTD
+    // Clear pass
     document.getElementById('login-pass').value = '';
+    // Clear emails
+    document.getElementById('login-user').value = '';
   }, 400);
 }
 
@@ -930,12 +952,20 @@ const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sun
 const WEEKEND = [5, 6]; // Saturday, Sunday (0-indexed)
 
 /* ── INIT ───────────────────────────────────────────── */
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   buildTable();
-  if (!loadAppState()) {
+  
+  // 1. Check for active Supabase session
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    revealApp();
+    document.getElementById('login-user').value = session.user.email;
+    await fetchFromSupabase(session.user.email);
+  } else if (!loadAppState()) {
     setDefaults();
   }
-  // Setup auto-save for all inputs
+
+  // 2. Setup auto-save for all inputs
   document.querySelectorAll('input, select, textarea').forEach(el => {
     el.addEventListener('change', saveAppState);
     el.addEventListener('input', saveAppState);
@@ -1309,14 +1339,16 @@ function calcAll() {
   document.getElementById('ytd-curr-net').textContent   = fmt(net);
   document.getElementById('ytd-new-net').textContent    = fmt(newYtdNet);
   
-  // Performance hack: only save to LS if something actually changed
-  // saveAppState();
+  // Explicitly save the new calculated state
+  saveAppState();
 }
 
 /* ── LOCAL STORAGE PERSISTENCE ──────────────────────────────── */
-function saveAppState() {
+let syncDebounceTimer = null;
+async function saveAppState() {
   const data = {
     profName      : document.getElementById('prof-name').value,
+    profEmail     : document.getElementById('login-user')?.value || '',
     company       : document.getElementById('company').value,
     title         : document.getElementById('title').value,
     weekStart     : document.getElementById('week-start').value,
@@ -1346,35 +1378,74 @@ function saveAppState() {
   }
   
   localStorage.setItem('minimed_app_state', JSON.stringify(data));
-  
-  // Background Sync to Supabase
-  syncToSupabase(data);
+
+  // Debounced Cloud Sync (wait 1s of inactivity before pushing to supabase)
+  if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+  syncDebounceTimer = setTimeout(async () => {
+    await syncToSupabase(data);
+  }, 1000);
 }
 
+let isSyncing = false;
 async function syncToSupabase(payloadData) {
-  let rowId = localStorage.getItem('supabase_row_id');
-  const record = { payload: payloadData };
+  if (isSyncing) return;
+  isSyncing = true;
 
   try {
-    if (rowId) {
-      const { error } = await sb
-        .from('timesheets')
-        .update(record)
-        .eq('id', rowId);
-      if (error) console.error("Supabase sync error:", error);
+    const { data: { user } } = await sb.auth.getUser();
+    const userEmail = user ? user.email : (payloadData.profEmail || payloadData.profName);
+    if (!userEmail) return;
+
+    const record = { 
+      payload: payloadData,
+      professional_email: userEmail,
+      updated_at: new Date().toISOString()
+    };
+
+    // Use Upsert with weekStart and Email as composite keys if possible, 
+    // or manual Select-then-Update/Insert
+    const { data: existing } = await sb
+      .from('timesheets')
+      .select('id')
+      .eq('professional_email', userEmail)
+      .eq('payload->>weekStart', payloadData.weekStart)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      await sb.from('timesheets').update(record).eq('id', existing[0].id);
     } else {
-      const { data, error } = await sb
-        .from('timesheets')
-        .insert([record])
-        .select();
-      
-      if (!error && data && data[0]) {
-        localStorage.setItem('supabase_row_id', data[0].id);
-      }
+      await sb.from('timesheets').insert([record]);
     }
   } catch (e) {
-    console.warn("Supabase background sync failed, staying local.", e);
+    console.warn("Cloud sync failed.", e);
+  } finally {
+    isSyncing = false;
   }
+}
+
+async function fetchFromSupabase(email) {
+  const currentWeek = document.getElementById('week-start').value;
+  try {
+    const { data, error } = await sb
+      .from('timesheets')
+      .select('*')
+      .eq('professional_email', email)
+      .eq('payload->>weekStart', currentWeek)
+      .limit(1);
+
+    if (!error && data && data.length > 0) {
+      const dbRow = data[0];
+      localStorage.setItem('supabase_row_id', dbRow.id);
+      localStorage.setItem('minimed_app_state', JSON.stringify(dbRow.payload));
+      
+      loadAppState();
+      showToast('☁️ Timesheet restored for this week');
+      return true;
+    }
+  } catch (e) {
+    console.warn("Cloud fetch failed.", e);
+  }
+  return false;
 }
 
 function loadAppState() {
