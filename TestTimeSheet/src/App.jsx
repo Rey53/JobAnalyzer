@@ -195,7 +195,7 @@ function App() {
             <InputGroup label="Professional (Employee) Name" value={profInfo.name} onChange={(v) => setProfInfo({ ...profInfo, name: v })} />
             <InputGroup label="Company / Client" value={profInfo.company} onChange={(v) => setProfInfo({ ...profInfo, company: v })} />
             <InputGroup label="Job Title / Role" value={profInfo.title} onChange={(v) => setProfInfo({ ...profInfo, title: v })} />
-            <InputGroup label="Week Starting (Monday)" type="date" value={profInfo.weekStart} onChange={(v) => setProfInfo({ ...profInfo, weekStart: v })} />
+            <InputGroup label="Week Starting (Monday)" type="date" min="2026-03-30" value={profInfo.weekStart} onChange={(v) => setProfInfo({ ...profInfo, weekStart: v })} />
             <InputGroup label="Supervisor Name" value={profInfo.supervisor} onChange={(v) => setProfInfo({ ...profInfo, supervisor: v })} />
             <InputGroup label="Project / PO Code" value={profInfo.projectCode} onChange={(v) => setProfInfo({ ...profInfo, projectCode: v })} />
             <InputGroup label="Timesheet #" type="number" value={profInfo.tsNumber} onChange={(v) => setProfInfo({ ...profInfo, tsNumber: v })} />
@@ -250,6 +250,7 @@ function App() {
                     <td className="center date-cell">
                       <input 
                         type="date" 
+                        min={i === 0 ? "2026-03-30" : ""}
                         value={entry.date || ''} 
                         readOnly={i > 0}
                         onChange={(e) => {
@@ -413,11 +414,11 @@ function App() {
   );
 }
 
-function InputGroup({ label, type = "text", value, onChange }) {
+function InputGroup({ label, type = "text", value, onChange, min }) {
   return (
     <div className="input-group">
       <label className="label">{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+      <input type={type} value={value} min={min} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }

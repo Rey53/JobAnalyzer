@@ -10,6 +10,7 @@ const EXEMPT_LIMIT = 500;
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const WEEKEND_INDICES = [5, 6];
+const WEEK_ONE_START = new Date('2026-03-30T00:00:00'); // 03/30/2026 = Week 1
 
 function getMonday() {
   const today = new Date();
@@ -17,7 +18,8 @@ function getMonday() {
   const diff = today.getDate() - day + (day === 0 ? -6 : 1);
   const mon = new Date(today);
   mon.setDate(diff);
-  return mon.toISOString().split('T')[0];
+  const formatted = mon.toISOString().split('T')[0];
+  return formatted < '2026-03-30' ? '2026-03-30' : formatted;
 }
 
 function buildDates(weekStart) {
@@ -124,24 +126,30 @@ export function useTimesheet() {
     setEntries(prev => prev.map((e, i) => ({ ...e, date: dates[i] })));
   }, [profInfo.weekStart]);
 
-  // ── ROLLOVER TO NEW WEEK ──
-  const rolloverNewWeek = () => {
+  // ── WEEK NUMBER (calculated from 03/30/2026 = Week 1) ──
+  const weekNumber = useMemo(() => {
+    if (!profInfo.weekStart) return 1;
+    const current = new Date(profInfo.weekStart + 'T00:00:00');
+    const diffMs = current - WEEK_ONE_START;
+    const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+    return Math.max(1, diffWeeks + 1);
+  }, [profInfo.weekStart]);
+
+  // ── NAVIGATE WEEKS ──
+  const navigateWeek = (direction) => {
     const currentStart = new Date(profInfo.weekStart + 'T00:00:00');
-    currentStart.setDate(currentStart.getDate() + 7);
+    currentStart.setDate(currentStart.getDate() + (direction * 7));
     const newWeekStart = currentStart.toISOString().split('T')[0];
-    const newDates = buildDates(newWeekStart);
 
     setProfInfo(prev => ({
       ...prev,
       weekStart: newWeekStart,
-      tsNumber: (parseInt(prev.tsNumber) || 0) + 1,
-      prevYtdGross: totals.newYtdGross,
-      prevYtdNet: totals.newYtdNet,
       comments: '',
       profSignature: '',
       supSignature: ''
     }));
 
+    const newDates = buildDates(newWeekStart);
     setEntries(DAYS.map((day, i) => ({
       day,
       date: newDates[i],
@@ -152,6 +160,9 @@ export function useTimesheet() {
       description: ''
     })));
   };
+
+  const rolloverNewWeek = () => navigateWeek(1);
+  const rolloverPrevWeek = () => navigateWeek(-1);
 
   // ── DERIVED CALCULATIONS (useMemo = no infinite loops) ──
   const entriesWithHours = useMemo(() => {
@@ -249,6 +260,8 @@ export function useTimesheet() {
     totals,
     syncStatus,
     loading,
-    rolloverNewWeek
+    weekNumber,
+    rolloverNewWeek,
+    rolloverPrevWeek
   };
 }
