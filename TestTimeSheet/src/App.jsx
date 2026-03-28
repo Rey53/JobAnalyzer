@@ -20,6 +20,7 @@ import {
   FileText
 } from 'lucide-react';
 import { useTimesheet } from './hooks/useTimesheet';
+import { supabase } from './lib/supabase';
 import './App.css';
 
 function App() {
@@ -39,27 +40,28 @@ function App() {
   const checkLogin = async () => {
     setLoginError(false);
     
-    // 1. MASTER KEY OVERRIDE
-    if ((loginForm.user === 'EqvalAdmin' && loginForm.pass === 'Eqval2026!') || 
-        (loginForm.user === 'reyenergybroker@gmail.com' && loginForm.pass === 'Eqval2026!')) {
+    // 1. EMERGENCY MASTER KEY (bypass only)
+    if (loginForm.user === 'EqvalAdmin' && loginForm.pass === 'Eqval2026!') {
       setLoggedIn(true);
       return;
     }
 
-    // 2. SUPABASE REAL AUTH
+    // 2. SUPABASE AUTH — Primary login method
     setIsAuthLoading(true);
     try {
-      const { data, error } = await import('./lib/supabase').then(m => m.supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: loginForm.user,
         password: loginForm.pass
-      }));
+      });
 
       if (error) throw error;
       if (data?.user) {
         setLoggedIn(true);
+      } else {
+        setLoginError(true);
       }
     } catch (e) {
-      console.error("Login Error:", e.message);
+      console.error('Supabase Auth Error:', e.message);
       setLoginError(true);
     } finally {
       setIsAuthLoading(false);
