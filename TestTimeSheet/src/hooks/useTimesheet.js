@@ -11,16 +11,13 @@ const EXEMPT_LIMIT = 500;
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const WEEKEND_INDICES = [5, 6];
 
-function getMonday(dateStr) {
-  if (!dateStr) {
-    const today = new Date();
-    const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-    const mon = new Date(today);
-    mon.setDate(diff);
-    return mon.toISOString().split('T')[0];
-  }
-  return dateStr;
+function getMonday() {
+  const today = new Date();
+  const day = today.getDay();
+  const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+  const mon = new Date(today);
+  mon.setDate(diff);
+  return mon.toISOString().split('T')[0];
 }
 
 function buildDates(weekStart) {
@@ -33,8 +30,6 @@ function buildDates(weekStart) {
 }
 
 function calculateRowHours(entry) {
-  if (!entry.start || !entry.end) return 0;
-
   const toMin = (t) => {
     if (!t) return null;
     const [h, m] = t.split(':').map(Number);
@@ -42,20 +37,33 @@ function calculateRowHours(entry) {
   };
 
   const start = toMin(entry.start);
-  const lout = toMin(entry.lunchOut);
-  const lin = toMin(entry.lunchIn);
-  const end = toMin(entry.end);
+  const lout  = toMin(entry.lunchOut);
+  const lin   = toMin(entry.lunchIn);
+  const end   = toMin(entry.end);
 
-  if (start === null || end === null || end <= start) return 0;
+  // Case 1: Full day (Start + LunchOut + LunchIn + End)
+  if (start !== null && lout !== null && lin !== null && end !== null) {
+    const amMin = (lout > start) ? (lout - start) : 0;
+    const pmMin = (end > lin)    ? (end - lin)     : 0;
+    return (amMin + pmMin) / 60;
+  }
 
-  // No lunch break entered → straight through
-  if (lout === null || lin === null) {
+  // Case 2: No lunch break (Start + End only)
+  if (start !== null && end !== null && end > start) {
     return (end - start) / 60;
   }
 
-  const amMin = (lout > start) ? (lout - start) : 0;
-  const pmMin = (end > lin) ? (end - lin) : 0;
-  return (amMin + pmMin) / 60;
+  // Case 3: Afternoon only (LunchIn + End)
+  if (lin !== null && end !== null && end > lin) {
+    return (end - lin) / 60;
+  }
+
+  // Case 4: Morning only (Start + LunchOut)
+  if (start !== null && lout !== null && lout > start) {
+    return (lout - start) / 60;
+  }
+
+  return 0;
 }
 
 export function useTimesheet() {
@@ -80,10 +88,12 @@ export function useTimesheet() {
     ccEmail: ''
   });
 
+  const defaultDates = buildDates(profInfo.weekStart);
+
   const [entries, setEntries] = useState(
     DAYS.map((day, i) => ({
       day,
-      date: '',
+      date: defaultDates[i],
       start: WEEKEND_INDICES.includes(i) ? '' : '08:00',
       lunchOut: WEEKEND_INDICES.includes(i) ? '' : '12:00',
       lunchIn: WEEKEND_INDICES.includes(i) ? '' : '13:00',
@@ -92,13 +102,6 @@ export function useTimesheet() {
     }))
   );
 
-  // ── POPULATE DATES WHEN WEEK START CHANGES ──
-  useEffect(() => {
-    if (!profInfo.weekStart) return;
-    const dates = buildDates(profInfo.weekStart);
-    setEntries(prev => prev.map((e, i) => ({ ...e, date: dates[i] })));
-  }, [profInfo.weekStart]);
-
   // ── LOCAL STORAGE RESTORE ON INIT ──
   useEffect(() => {
     const saved = localStorage.getItem('minimed_app_state_v2');
@@ -106,7 +109,7 @@ export function useTimesheet() {
       try {
         const data = JSON.parse(saved);
         if (data.profInfo) setProfInfo(prev => ({ ...prev, ...data.profInfo }));
-        if (data.entries) setEntries(data.entries);
+        if (data.entries)  setEntries(data.entries);
       } catch (e) {
         console.error('LocalStorage restore failed', e);
       }
@@ -114,7 +117,36 @@ export function useTimesheet() {
     setLoading(false);
   }, []);
 
-  // ── DERIVED CALCULATIONS (no infinite loops!) ──
+  // ── ROLLOVER TO NEW WEEK ──
+  const rolloverNewWeek = () => {
+    const currentStart = new Date(profInfo.weekStart + 'T00:00:00');
+    currentStart.setDate(currentStart.getDate() + 7);
+    const newWeekStart = currentStart.toISOString().split('T')[0];
+    const newDates = buildDates(newWeekStart);
+
+    setProfInfo(prev => ({
+      ...prev,
+      weekStart: newWeekStart,
+      tsNumber: (parseInt(prev.tsNumber) || 0) + 1,
+      prevYtdGross: totals.newYtdGross,
+      prevYtdNet: totals.newYtdNet,
+      comments: '',
+      profSignature: '',
+      supSignature: ''
+    }));
+
+    setEntries(DAYS.map((day, i) => ({
+      day,
+      date: newDates[i],
+      start: WEEKEND_INDICES.includes(i) ? '' : '08:00',
+      lunchOut: WEEKEND_INDICES.includes(i) ? '' : '12:00',
+      lunchIn: WEEKEND_INDICES.includes(i) ? '' : '13:00',
+      end: WEEKEND_INDICES.includes(i) ? '' : '17:00',
+      description: ''
+    })));
+  };
+
+  // ── DERIVED CALCULATIONS (useMemo = no infinite loops) ──
   const entriesWithHours = useMemo(() => {
     return entries.map(e => ({
       ...e,
@@ -127,15 +159,15 @@ export function useTimesheet() {
     const gross = totalHours * RATE;
 
     const prevGross = parseFloat(profInfo.prevYtdGross) || 0;
-    const prevNet = parseFloat(profInfo.prevYtdNet) || 0;
+    const prevNet   = parseFloat(profInfo.prevYtdNet) || 0;
     const totalYtdGross = prevGross + gross;
 
     const prSubject = Math.max(0, totalYtdGross - Math.max(EXEMPT_LIMIT, prevGross));
-    const prWh = prSubject * PR_WH_RATE;
-    const ss = gross * SS_RATE;
-    const medicare = gross * MEDICARE_RATE;
-    const totalRet = prWh + ss + medicare;
-    const net = gross - totalRet;
+    const prWh      = prSubject * PR_WH_RATE;
+    const ss        = gross * SS_RATE;
+    const medicare  = gross * MEDICARE_RATE;
+    const totalRet  = prWh + ss + medicare;
+    const net       = gross - totalRet;
 
     return {
       totalHours: totalHours.toFixed(2),
@@ -209,6 +241,7 @@ export function useTimesheet() {
     setEntries,
     totals,
     syncStatus,
-    loading
+    loading,
+    rolloverNewWeek
   };
 }

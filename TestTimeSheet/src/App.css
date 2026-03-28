@@ -192,7 +192,31 @@ td { padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); vertical
 
 .center { text-align: center; }
 .date-cell { font-size: 0.8rem; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.date-cell input[type="date"] { 
+  width: 130px; 
+  font-size: 0.78rem; 
+  padding: 6px 8px; 
+  background: rgba(0, 0, 0, 0.3); 
+  color: var(--text);
+  color-scheme: dark;
+}
 .desc-cell textarea { font-size: 0.78rem; border-color: transparent; }
+
+/* Force dark backgrounds on native selects and options */
+select, option {
+  background: var(--card) !important;
+  color: var(--text) !important;
+  color-scheme: dark;
+}
+
+/* ── ROLLOVER BUTTON ── */
+.btn-rollover {
+  background: linear-gradient(135deg, var(--amber), #d97706) !important;
+  box-shadow: 0 8px 16px rgba(245, 158, 11, 0.2) !important;
+}
+.btn-rollover:hover {
+  box-shadow: 0 12px 24px rgba(245, 158, 11, 0.35) !important;
+}
 
 /* ── PAY CARDS ── */
 .pay-summary-grid {

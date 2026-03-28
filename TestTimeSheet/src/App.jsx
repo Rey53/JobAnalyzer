@@ -17,6 +17,7 @@ import {
   ChevronRight,
   TrendingUp,
   CreditCard,
+  RotateCw,
   FileText
 } from 'lucide-react';
 import { useTimesheet } from './hooks/useTimesheet';
@@ -29,7 +30,8 @@ function App() {
     entries, setEntries, 
     totals, 
     syncStatus, 
-    loading 
+    loading,
+    rolloverNewWeek 
   } = useTimesheet();
 
   const [loggedIn, setLoggedIn] = useState(false);
@@ -228,7 +230,13 @@ function App() {
                       <div className={`dot ${[5,6].includes(i) ? 'weekend' : ''}`}></div>
                       {entry.day}
                     </td>
-                    <td className="center date-cell">{entry.date ? new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</td>
+                    <td className="center date-cell">
+                      <input type="date" value={entry.date || ''} onChange={(e) => {
+                        const newEntries = [...entries];
+                        newEntries[i] = { ...newEntries[i], date: e.target.value };
+                        setEntries(newEntries);
+                      }} />
+                    </td>
                     <td className={`center hours ${entry.hours > 0 ? 'active' : ''}`}>{entry.hours.toFixed(2)}</td>
                     <td className="center"><TimeSelect value={entry.start} onChange={(v) => {
                       const newEntries = [...entries];
@@ -363,6 +371,9 @@ function App() {
             </button>
             <button className="btn-primary btn-secondary flex-1" onClick={() => window.print()}>
               <Printer size={18} /> Print PDF
+            </button>
+            <button className="btn-primary btn-rollover flex-1" onClick={rolloverNewWeek}>
+              <RotateCw size={18} /> Roll to New Week
             </button>
           </div>
         </section>
