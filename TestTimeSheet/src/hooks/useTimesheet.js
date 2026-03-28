@@ -117,6 +117,13 @@ export function useTimesheet() {
     setLoading(false);
   }, []);
 
+  // ── AUTO-POPULATE DATES WHEN WEEK START CHANGES ──
+  useEffect(() => {
+    if (!profInfo.weekStart) return;
+    const dates = buildDates(profInfo.weekStart);
+    setEntries(prev => prev.map((e, i) => ({ ...e, date: dates[i] })));
+  }, [profInfo.weekStart]);
+
   // ── ROLLOVER TO NEW WEEK ──
   const rolloverNewWeek = () => {
     const currentStart = new Date(profInfo.weekStart + 'T00:00:00');
