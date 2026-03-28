@@ -142,6 +142,9 @@ function App() {
           </div>
           
           <div className="hero-right">
+            <div className="badge week-badge">
+              <Calendar size={14} /> Week #{profInfo.tsNumber}
+            </div>
             <div className="badge pr-badge">
               <ShieldCheck size={14} /> 🇵🇷 Puerto Rico
             </div>
@@ -231,11 +234,21 @@ function App() {
                       {entry.day}
                     </td>
                     <td className="center date-cell">
-                      <input type="date" value={entry.date || ''} onChange={(e) => {
-                        const newEntries = [...entries];
-                        newEntries[i] = { ...newEntries[i], date: e.target.value };
-                        setEntries(newEntries);
-                      }} />
+                      <input 
+                        type="date" 
+                        value={entry.date || ''} 
+                        readOnly={i > 0}
+                        onChange={(e) => {
+                          if (i === 0) {
+                            // Monday drives all dates
+                            setProfInfo({ ...profInfo, weekStart: e.target.value });
+                          } else {
+                            const newEntries = [...entries];
+                            newEntries[i] = { ...newEntries[i], date: e.target.value };
+                            setEntries(newEntries);
+                          }
+                        }} 
+                      />
                     </td>
                     <td className={`center hours ${entry.hours > 0 ? 'active' : ''}`}>{entry.hours.toFixed(2)}</td>
                     <td className="center"><TimeSelect value={entry.start} onChange={(v) => {

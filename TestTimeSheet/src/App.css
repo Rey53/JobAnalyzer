@@ -200,6 +200,20 @@ td { padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); vertical
   color: var(--text);
   color-scheme: dark;
 }
+.date-cell input[type="date"][readonly] {
+  opacity: 0.6;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Week Badge */
+.week-badge {
+  background: rgba(34, 197, 94, 0.12) !important;
+  color: #86efac !important;
+  border-color: rgba(34, 197, 94, 0.3) !important;
+  font-size: 0.85rem !important;
+  font-weight: 800 !important;
+}
 .desc-cell textarea { font-size: 0.78rem; border-color: transparent; }
 
 /* Force dark backgrounds on native selects and options */
