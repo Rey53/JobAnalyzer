@@ -212,6 +212,7 @@ function App() {
               <thead>
                 <tr>
                   <th>Day</th>
+                  <th className="center">Date</th>
                   <th className="center">Hours</th>
                   <th className="center">Start</th>
                   <th className="center">Lunch Out</th>
@@ -227,6 +228,7 @@ function App() {
                       <div className={`dot ${[5,6].includes(i) ? 'weekend' : ''}`}></div>
                       {entry.day}
                     </td>
+                    <td className="center date-cell">{entry.date ? new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</td>
                     <td className={`center hours ${entry.hours > 0 ? 'active' : ''}`}>{entry.hours.toFixed(2)}</td>
                     <td className="center"><TimeSelect value={entry.start} onChange={(v) => {
                       const newEntries = [...entries];

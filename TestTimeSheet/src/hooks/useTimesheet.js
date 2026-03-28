@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 // Constants synced with original PRD
@@ -11,9 +11,56 @@ const EXEMPT_LIMIT = 500;
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const WEEKEND_INDICES = [5, 6];
 
+function getMonday(dateStr) {
+  if (!dateStr) {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+    const mon = new Date(today);
+    mon.setDate(diff);
+    return mon.toISOString().split('T')[0];
+  }
+  return dateStr;
+}
+
+function buildDates(weekStart) {
+  const base = new Date(weekStart + 'T00:00:00');
+  return DAYS.map((_, i) => {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
+    return d.toISOString().split('T')[0];
+  });
+}
+
+function calculateRowHours(entry) {
+  if (!entry.start || !entry.end) return 0;
+
+  const toMin = (t) => {
+    if (!t) return null;
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const start = toMin(entry.start);
+  const lout = toMin(entry.lunchOut);
+  const lin = toMin(entry.lunchIn);
+  const end = toMin(entry.end);
+
+  if (start === null || end === null || end <= start) return 0;
+
+  // No lunch break entered → straight through
+  if (lout === null || lin === null) {
+    return (end - start) / 60;
+  }
+
+  const amMin = (lout > start) ? (lout - start) : 0;
+  const pmMin = (end > lin) ? (end - lin) : 0;
+  return (amMin + pmMin) / 60;
+}
+
 export function useTimesheet() {
   const [loading, setLoading] = useState(true);
-  const [syncStatus, setSyncStatus] = useState('idle'); // idle, pending, syncing, saved, error
+  const [syncStatus, setSyncStatus] = useState('idle');
   const [profInfo, setProfInfo] = useState({
     name: 'Luis G. Reyes Morales',
     company: 'MiniMed – Juncos',
@@ -21,14 +68,14 @@ export function useTimesheet() {
     supervisor: 'Charlene González',
     projectCode: 'EQValPR',
     tsNumber: 1,
-    weekStart: '', // Sets on init
+    weekStart: getMonday(),
     prevYtdGross: 0,
     prevYtdNet: 0,
     comments: '',
     profSignature: '',
-    profSignDate: '',
+    profSignDate: new Date().toISOString().split('T')[0],
     supSignature: '',
-    supSignDate: '',
+    supSignDate: new Date().toISOString().split('T')[0],
     recipientEmail: 'reyenergybroker@gmail.com',
     ccEmail: ''
   });
@@ -41,98 +88,48 @@ export function useTimesheet() {
       lunchOut: WEEKEND_INDICES.includes(i) ? '' : '12:00',
       lunchIn: WEEKEND_INDICES.includes(i) ? '' : '13:00',
       end: WEEKEND_INDICES.includes(i) ? '' : '17:00',
-      description: '',
-      hours: 0
+      description: ''
     }))
   );
 
-  const [totals, setTotals] = useState({
-    totalHours: 0,
-    grossPay: 0,
-    prWh: 0,
-    ss: 0,
-    medicare: 0,
-    totalRet: 0,
-    netPay: 0,
-    newYtdGross: 0,
-    newYtdNet: 0,
-    effectiveRate: 0
-  });
-
-  // ── INIT DEFAULTS ──
+  // ── POPULATE DATES WHEN WEEK START CHANGES ──
   useEffect(() => {
-    // Basic day cascading logic from original script
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const monday = new Date(today);
-    const diff = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7;
-    monday.setDate(today.getDate() + (dayOfWeek === 1 ? 0 : diff));
-    
-    const weekStartIso = monday.toISOString().split('T')[0];
-    const todayIso = today.toISOString().split('T')[0];
+    if (!profInfo.weekStart) return;
+    const dates = buildDates(profInfo.weekStart);
+    setEntries(prev => prev.map((e, i) => ({ ...e, date: dates[i] })));
+  }, [profInfo.weekStart]);
 
-    setProfInfo(prev => ({
-      ...prev,
-      weekStart: weekStartIso,
-      profSignDate: todayIso,
-      supSignDate: todayIso
-    }));
-
-    // Local storage restore
+  // ── LOCAL STORAGE RESTORE ON INIT ──
+  useEffect(() => {
     const saved = localStorage.getItem('minimed_app_state_v2');
     if (saved) {
       try {
         const data = JSON.parse(saved);
-        setProfInfo(prev => ({ ...prev, ...data.profInfo }));
-        setEntries(data.entries);
+        if (data.profInfo) setProfInfo(prev => ({ ...prev, ...data.profInfo }));
+        if (data.entries) setEntries(data.entries);
       } catch (e) {
-        console.error('Local Storage Restore Failed', e);
+        console.error('LocalStorage restore failed', e);
       }
     }
     setLoading(false);
   }, []);
 
-  // ── CALCULATE INDIVIDUAL ROW ──
-  const calculateRowHours = useCallback((entry) => {
-    if (!entry.start || !entry.end) return 0;
-    
-    const toMin = (t) => {
-      if (!t) return null;
-      const [h, m] = t.split(':').map(Number);
-      return h * 60 + m;
-    };
-
-    const start = toMin(entry.start);
-    const lout = toMin(entry.lunchOut);
-    const lin = toMin(entry.lunchIn);
-    const end = toMin(entry.end);
-
-    let amMin = (lout && start && lout > start) ? (lout - start) : 0;
-    let pmMin = (end && lin && end > lin) ? (end - lin) : 0;
-
-    if (start !== null && end !== null && end > start && (!lout || !lin)) {
-      return (end - start) / 60;
-    }
-    return (amMin + pmMin) / 60;
-  }, []);
-
-  // ── RE-CALCULATE ALL WHEN ENTRIES OR PROF INFO CHANGE ──
-  useEffect(() => {
-    if (loading) return;
-
-    const newEntries = entries.map(e => ({
+  // ── DERIVED CALCULATIONS (no infinite loops!) ──
+  const entriesWithHours = useMemo(() => {
+    return entries.map(e => ({
       ...e,
       hours: calculateRowHours(e)
     }));
+  }, [entries]);
 
-    const totalHours = newEntries.reduce((acc, e) => acc + e.hours, 0);
+  const totals = useMemo(() => {
+    const totalHours = entriesWithHours.reduce((acc, e) => acc + e.hours, 0);
     const gross = totalHours * RATE;
-    
-    // YTD & Exemption logic
+
     const prevGross = parseFloat(profInfo.prevYtdGross) || 0;
     const prevNet = parseFloat(profInfo.prevYtdNet) || 0;
     const totalYtdGross = prevGross + gross;
-    
+
     const prSubject = Math.max(0, totalYtdGross - Math.max(EXEMPT_LIMIT, prevGross));
     const prWh = prSubject * PR_WH_RATE;
     const ss = gross * SS_RATE;
@@ -140,7 +137,7 @@ export function useTimesheet() {
     const totalRet = prWh + ss + medicare;
     const net = gross - totalRet;
 
-    setTotals({
+    return {
       totalHours: totalHours.toFixed(2),
       grossPay: gross,
       prWh,
@@ -151,44 +148,51 @@ export function useTimesheet() {
       newYtdGross: totalYtdGross,
       newYtdNet: prevNet + net,
       effectiveRate: gross > 0 ? (totalRet / gross) * 100 : 0
-    });
+    };
+  }, [entriesWithHours, profInfo.prevYtdGross, profInfo.prevYtdNet]);
 
-    // Save to LocalStorage
-    localStorage.setItem('minimed_app_state_v2', JSON.stringify({ profInfo, entries: newEntries }));
-    
-    // Debounced sync to Supabase
+  // ── SAVE TO LOCAL STORAGE + TRIGGER SYNC ──
+  useEffect(() => {
+    if (loading) return;
+    localStorage.setItem('minimed_app_state_v2', JSON.stringify({ profInfo, entries }));
     setSyncStatus('pending');
-  }, [entries, profInfo, loading, calculateRowHours]);
+  }, [entries, profInfo, loading]);
 
-  // ── SUPABASE SYNC LOGIC ──
+  // ── SUPABASE SYNC (debounced) ──
   const syncTimer = useRef(null);
   useEffect(() => {
     if (loading || syncStatus !== 'pending') return;
 
     if (syncTimer.current) clearTimeout(syncTimer.current);
-    
+
     syncTimer.current = setTimeout(async () => {
       setSyncStatus('syncing');
       try {
-        const payload = { profInfo, entries, totals, generatedAt: new Date().toISOString() };
-        
-        // Find if row exists for user & week
-        const { data: existing } = await supabase
+        const payload = { profInfo, entries: entriesWithHours, totals, generatedAt: new Date().toISOString() };
+
+        const { data: existing, error: selErr } = await supabase
           .from('timesheets')
           .select('id')
           .eq('professional_email', profInfo.recipientEmail)
           .eq('payload->>weekStart', profInfo.weekStart)
           .limit(1);
 
+        if (selErr) throw selErr;
+
+        let resError;
         if (existing && existing.length > 0) {
-          await supabase.from('timesheets').update({ payload, updated_at: new Date().toISOString() }).eq('id', existing[0].id);
+          const { error } = await supabase.from('timesheets').update({ payload, updated_at: new Date().toISOString() }).eq('id', existing[0].id);
+          resError = error;
         } else {
-          await supabase.from('timesheets').insert([{ 
-            payload, 
+          const { error } = await supabase.from('timesheets').insert([{
+            payload,
             professional_email: profInfo.recipientEmail,
             updated_at: new Date().toISOString()
           }]);
+          resError = error;
         }
+
+        if (resError) throw resError;
         setSyncStatus('saved');
       } catch (e) {
         console.error('Supabase Sync Error', e);
@@ -197,11 +201,12 @@ export function useTimesheet() {
     }, 2000);
 
     return () => clearTimeout(syncTimer.current);
-  }, [profInfo, entries, totals, loading, syncStatus]);
+  }, [profInfo, entries, entriesWithHours, totals, loading, syncStatus]);
 
   return {
     profInfo, setProfInfo,
-    entries, setEntries,
+    entries: entriesWithHours,
+    setEntries,
     totals,
     syncStatus,
     loading
