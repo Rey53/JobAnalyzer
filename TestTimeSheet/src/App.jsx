@@ -18,6 +18,7 @@ import {
   TrendingUp,
   CreditCard,
   RotateCw,
+  ChevronLeft,
   FileText
 } from 'lucide-react';
 import { useTimesheet } from './hooks/useTimesheet';
@@ -31,7 +32,9 @@ function App() {
     totals, 
     syncStatus, 
     loading,
-    rolloverNewWeek 
+    weekNumber,
+    rolloverNewWeek,
+    rolloverPrevWeek 
   } = useTimesheet();
 
   const [loggedIn, setLoggedIn] = useState(false);
@@ -142,9 +145,18 @@ function App() {
           </div>
           
           <div className="hero-right">
-            <div className="badge week-badge">
-              <Calendar size={14} /> Week #{profInfo.tsNumber}
+            <div className="nav-controls badge">
+              <button className="nav-btn" onClick={rolloverPrevWeek} title="Previous Week">
+                <ChevronLeft size={16} />
+              </button>
+              <div className="week-display">
+                <Calendar size={14} /> Week #{weekNumber}
+              </div>
+              <button className="nav-btn" onClick={rolloverNewWeek} title="Next Week">
+                <RotateCw size={16} />
+              </button>
             </div>
+
             <div className="badge pr-badge">
               <ShieldCheck size={14} /> 🇵🇷 Puerto Rico
             </div>
@@ -285,6 +297,13 @@ function App() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="total-row">
+                  <td colSpan="2">Weekly Total</td>
+                  <td className="center total-hours-cell">{totals.totalHours} hrs</td>
+                  <td colSpan="5"></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </section>
@@ -384,9 +403,6 @@ function App() {
             </button>
             <button className="btn-primary btn-secondary flex-1" onClick={() => window.print()}>
               <Printer size={18} /> Print PDF
-            </button>
-            <button className="btn-primary btn-rollover flex-1" onClick={rolloverNewWeek}>
-              <RotateCw size={18} /> Roll to New Week
             </button>
           </div>
         </section>

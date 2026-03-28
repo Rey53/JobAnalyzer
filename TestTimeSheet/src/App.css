@@ -192,6 +192,46 @@ td { padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); vertical
 
 .center { text-align: center; }
 .date-cell { font-size: 0.8rem; color: var(--muted); font-weight: 500; white-space: nowrap; }
+/* Header Nav Controls */
+.nav-controls {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px !important;
+}
+.nav-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.week-display {
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Footer Total Row */
+.total-row {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 700;
+  color: var(--text);
+}
+.total-hours-cell {
+  color: var(--green) !important;
+  font-size: 1rem;
+}
+
 .date-cell input[type="date"] { 
   width: 130px; 
   font-size: 0.78rem; 
