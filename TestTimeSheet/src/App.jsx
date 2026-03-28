@@ -31,6 +31,9 @@ function App() {
     loading 
   } = useTimesheet();
 
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [loginForm, setLoginForm] = useState({ user: '', pass: '' });
+  const [loginError, setLoginError] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   const checkLogin = async () => {
