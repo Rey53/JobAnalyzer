@@ -488,6 +488,21 @@
       color: #fff; box-shadow: 0 4px 16px rgba(79,110,247,.4);
     }
     .modal-btn-confirm:hover { opacity: .9; transform: translateY(-1px); }
+
+    /* ── SYNC STATUS INDICATOR ── */
+    #sync-status {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      padding: 5px 14px; border-radius: 999px;
+      font-size: .7rem; font-weight: 700; color: var(--muted);
+      margin-left: auto; transition: all .3s;
+    }
+    #sync-status.syncing { color: var(--amber); border-color: rgba(245,158,11,0.3); }
+    #sync-status.saved   { color: var(--green); border-color: rgba(34,197,94,0.3); }
+    #sync-status.error   { color: var(--red); border-color: rgba(239,68,68,0.3); }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    #sync-status.syncing .status-dot { animation: pulse 1s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: .4; } 100% { opacity: 1; } }
   </style>
 </head>
 <body>
@@ -525,6 +540,7 @@
       <p>MiniMed Personal · Professional Services</p>
     </div>
     <div class="badge-pr">🇵🇷 Puerto Rico · PR Tax Withholding</div>
+    <div id="sync-status"><div class="status-dot"></div><span id="sync-text">Check Connection</span></div>
     <button class="btn-logout" onclick="logout()">Logout</button>
   </div>
 </div>
@@ -1346,6 +1362,7 @@ function calcAll() {
 /* ── LOCAL STORAGE PERSISTENCE ──────────────────────────────── */
 let syncDebounceTimer = null;
 async function saveAppState() {
+  updateSyncStatus('pending');
   const data = {
     profName      : document.getElementById('prof-name').value,
     profEmail     : document.getElementById('login-user')?.value || '',
@@ -1386,15 +1403,29 @@ async function saveAppState() {
   }, 1000);
 }
 
+
+/* ── SYNC STATUS HELPER ────────────────────────────────────────── */
+function updateSyncStatus(status) {
+  const el = document.getElementById('sync-status');
+  const txt = document.getElementById('sync-text');
+  if (!el || !txt) return;
+  el.className = status;
+  if      (status === 'syncing') txt.innerText = 'Syncing...';
+  else if (status === 'saved')   txt.innerText = 'Cloud Saved';
+  else if (status === 'pending') txt.innerText = 'Pending Sync';
+  else if (status === 'error')   txt.innerText = 'Sync Failed';
+}
+
 let isSyncing = false;
 async function syncToSupabase(payloadData) {
   if (isSyncing) return;
   isSyncing = true;
+  updateSyncStatus('syncing');
 
   try {
     const { data: { user } } = await sb.auth.getUser();
     const userEmail = user ? user.email : (payloadData.profEmail || payloadData.profName);
-    if (!userEmail) return;
+    if (!userEmail) { updateSyncStatus('error'); return; }
 
     const record = { 
       payload: payloadData,
@@ -1402,22 +1433,34 @@ async function syncToSupabase(payloadData) {
       updated_at: new Date().toISOString()
     };
 
-    // Use Upsert with weekStart and Email as composite keys if possible, 
-    // or manual Select-then-Update/Insert
-    const { data: existing } = await sb
+    // Note: To successfully upsert, the table needs a unique index on (professional_email, payload->>weekStart)
+    // We try to find the row manually to avoid indexing requirement.
+    const { data: existing, error: selErr } = await sb
       .from('timesheets')
       .select('id')
       .eq('professional_email', userEmail)
       .eq('payload->>weekStart', payloadData.weekStart)
       .limit(1);
 
+    if (selErr) throw selErr;
+
+    let resError;
     if (existing && existing.length > 0) {
-      await sb.from('timesheets').update(record).eq('id', existing[0].id);
+      const { error } = await sb.from('timesheets').update(record).eq('id', existing[0].id);
+      resError = error;
     } else {
-      await sb.from('timesheets').insert([record]);
+      const { error } = await sb.from('timesheets').insert([record]);
+      resError = error;
     }
+
+    if (resError) throw resError;
+    updateSyncStatus('saved');
   } catch (e) {
-    console.warn("Cloud sync failed.", e);
+    console.error("Database Sync Error:", e);
+    updateSyncStatus('error');
+    if (e.message && e.message.includes("policy")) {
+      console.warn("MANDATORY: You must run the SQL policy from your Dashboard to enable anonymous saving!");
+    }
   } finally {
     isSyncing = false;
   }
@@ -1426,6 +1469,7 @@ async function syncToSupabase(payloadData) {
 async function fetchFromSupabase(email) {
   const currentWeek = document.getElementById('week-start').value;
   try {
+    updateSyncStatus('syncing');
     const { data, error } = await sb
       .from('timesheets')
       .select('*')
@@ -1433,17 +1477,22 @@ async function fetchFromSupabase(email) {
       .eq('payload->>weekStart', currentWeek)
       .limit(1);
 
-    if (!error && data && data.length > 0) {
+    if (error) throw error;
+
+    if (data && data.length > 0) {
       const dbRow = data[0];
       localStorage.setItem('supabase_row_id', dbRow.id);
       localStorage.setItem('minimed_app_state', JSON.stringify(dbRow.payload));
       
       loadAppState();
       showToast('☁️ Timesheet restored for this week');
+      updateSyncStatus('saved');
       return true;
     }
+    updateSyncStatus('saved');
   } catch (e) {
-    console.warn("Cloud fetch failed.", e);
+    console.error("Cloud fetch failed:", e);
+    updateSyncStatus('error');
   }
   return false;
 }
