@@ -146,9 +146,11 @@ function App() {
           
           <div className="hero-right">
             <div className="nav-controls badge">
-              <button className="nav-btn" onClick={rolloverPrevWeek} title="Previous Week">
-                <ChevronLeft size={16} />
-              </button>
+              {weekNumber > 1 ? (
+                <button className="nav-btn" onClick={rolloverPrevWeek} title="Previous Week">
+                  <ChevronLeft size={16} />
+                </button>
+              ) : <div style={{width: 24}}></div>}
               <div className="week-display">
                 <Calendar size={14} /> Week #{weekNumber}
               </div>

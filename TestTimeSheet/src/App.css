@@ -322,6 +322,6 @@ select, option {
   .total-value { color: black !important; }
   .pay-card { border: 1px solid #ddd !important; background: white !important; }
   .pc-val, .day-name { color: black !important; }
-  input, select, textarea { border: none !important; background: transparent !important; color: black !important; -webkit-appearance: none; }
+  input, select, textarea { border: none !important; background: transparent !important; color: black !important; appearance: none; -webkit-appearance: none; }
   .accent { color: black !important; }
 }
