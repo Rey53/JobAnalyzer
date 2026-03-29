@@ -35,10 +35,15 @@ function App() {
     loading,
     weekNumber,
     rolloverNewWeek,
-    rolloverPrevWeek 
+    rolloverPrevWeek,
+    forceSync
   } = useTimesheet();
 
   const [loggedIn, setLoggedIn] = useState(false);
+  const handleLogout = async () => {
+    await forceSync();
+    setLoggedIn(false);
+  };
   const [loginForm, setLoginForm] = useState({ user: '', pass: '' });
   const [loginError, setLoginError] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
@@ -254,7 +259,7 @@ function App() {
               </span>
             </div>
 
-            <button className="btn-logout" onClick={() => setLoggedIn(false)}>
+            <button className="btn-logout" onClick={handleLogout}>
               <LogOut size={16} /> Logout
             </button>
           </div>

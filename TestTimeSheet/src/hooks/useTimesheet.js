@@ -210,49 +210,64 @@ export function useTimesheet() {
   }, [entries, profInfo, loading]);
 
   // ── SUPABASE SYNC (debounced) ──
+  const performSync = async () => {
+    if (loading) return;
+    setSyncStatus('syncing');
+    try {
+      const payload = { 
+        profInfo, 
+        entries: entriesWithHours, 
+        totals, 
+        generatedAt: new Date().toISOString(),
+        weekStart: profInfo.weekStart
+      };
+
+      const { data: existing, error: selErr } = await supabase
+        .from('timesheets')
+        .select('id')
+        .eq('professional_email', profInfo.recipientEmail)
+        .eq('payload->>weekStart', profInfo.weekStart)
+        .limit(1);
+
+      if (selErr) throw selErr;
+
+      let resError;
+      if (existing && existing.length > 0) {
+        const { error } = await supabase.from('timesheets').update({ payload, updated_at: new Date().toISOString() }).eq('id', existing[0].id);
+        resError = error;
+      } else {
+        const { error } = await supabase.from('timesheets').insert([{
+          payload,
+          professional_email: profInfo.recipientEmail,
+          updated_at: new Date().toISOString()
+        }]);
+        resError = error;
+      }
+
+      if (resError) throw resError;
+      setSyncStatus('saved');
+    } catch (e) {
+      console.error('Supabase Sync Error', e);
+      setSyncStatus('error');
+    }
+  };
+
+  // ── SUPABASE SYNC (debounced) ──
   const syncTimer = useRef(null);
   useEffect(() => {
     if (loading || syncStatus !== 'pending') return;
 
     if (syncTimer.current) clearTimeout(syncTimer.current);
 
-    syncTimer.current = setTimeout(async () => {
-      setSyncStatus('syncing');
-      try {
-        const payload = { profInfo, entries: entriesWithHours, totals, generatedAt: new Date().toISOString() };
-
-        const { data: existing, error: selErr } = await supabase
-          .from('timesheets')
-          .select('id')
-          .eq('professional_email', profInfo.recipientEmail)
-          .eq('payload->>weekStart', profInfo.weekStart)
-          .limit(1);
-
-        if (selErr) throw selErr;
-
-        let resError;
-        if (existing && existing.length > 0) {
-          const { error } = await supabase.from('timesheets').update({ payload, updated_at: new Date().toISOString() }).eq('id', existing[0].id);
-          resError = error;
-        } else {
-          const { error } = await supabase.from('timesheets').insert([{
-            payload,
-            professional_email: profInfo.recipientEmail,
-            updated_at: new Date().toISOString()
-          }]);
-          resError = error;
-        }
-
-        if (resError) throw resError;
-        setSyncStatus('saved');
-      } catch (e) {
-        console.error('Supabase Sync Error', e);
-        setSyncStatus('error');
-      }
-    }, 2000);
+    syncTimer.current = setTimeout(performSync, 2000);
 
     return () => clearTimeout(syncTimer.current);
   }, [profInfo, entries, entriesWithHours, totals, loading, syncStatus]);
+
+  const forceSync = async () => {
+    if (syncTimer.current) clearTimeout(syncTimer.current);
+    await performSync();
+  };
 
   return {
     profInfo, setProfInfo,
@@ -263,6 +278,7 @@ export function useTimesheet() {
     loading,
     weekNumber,
     rolloverNewWeek,
-    rolloverPrevWeek
+    rolloverPrevWeek,
+    forceSync
   };
 }
