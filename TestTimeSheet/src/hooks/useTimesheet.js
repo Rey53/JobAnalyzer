@@ -81,6 +81,8 @@ export function useTimesheet() {
     weekStart: getMonday(),
     prevYtdGross: 0,
     prevYtdNet: 0,
+    prevYtdPrWh: 0,
+    prevYtdSelfEmp: 0,
     comments: '',
     profSignature: '',
     profSignDate: new Date().toISOString().split('T')[0],
@@ -213,6 +215,8 @@ export function useTimesheet() {
 
     const prevGross = parseFloat(profInfo.prevYtdGross) || 0;
     const prevNet = parseFloat(profInfo.prevYtdNet) || 0;
+    const prevPrWh = parseFloat(profInfo.prevYtdPrWh) || 0;
+    const prevSelfEmp = parseFloat(profInfo.prevYtdSelfEmp) || 0;
     const totalYtdGross = prevGross + gross;
 
     const prSubject = Math.max(0, totalYtdGross - Math.max(EXEMPT_LIMIT, prevGross));
@@ -233,9 +237,12 @@ export function useTimesheet() {
       netPay: net,
       newYtdGross: totalYtdGross,
       newYtdNet: prevNet + net,
+      newYtdPrWh: prevPrWh + prWh,
+      newYtdSelfEmp: prevSelfEmp + ss + medicare,
+      selfEmpPercentOfNet: net > 0 ? ((ss + medicare) / net) * 100 : 0,
       effectiveRate: gross > 0 ? (totalRet / gross) * 100 : 0
     };
-  }, [entriesWithHours, profInfo.prevYtdGross, profInfo.prevYtdNet]);
+  }, [entriesWithHours, profInfo.prevYtdGross, profInfo.prevYtdNet, profInfo.prevYtdPrWh, profInfo.prevYtdSelfEmp]);
 
   // ── SAVE TO LOCAL STORAGE + TRIGGER SYNC ──
   useEffect(() => {

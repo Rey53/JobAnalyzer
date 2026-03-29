@@ -272,6 +272,10 @@ function App() {
           <AlertCircle size={18} color="var(--amber)" />
           <span>Rate: <strong>Applied</strong> · PR Withholding: <strong>10%</strong> (Hacienda – Independent Contractor) · Both PR & Federal retention applied automatically.</span>
         </div>
+        <div className="info-banner glass" style={{ marginTop: '-12px', marginBottom: '24px', borderColor: 'rgba(79, 110, 247, 0.3)', background: 'rgba(79, 110, 247, 0.05)' }}>
+          <AlertCircle size={18} color="var(--accent)" />
+          <span><strong>Important:</strong> This timesheet must be submitted every Tuesday before 5:00 PM to accounts@eqvalpr.com.</span>
+        </div>
 
         {/* ── SECTION 1: HEADER INFO ── */}
         <section className="card glass section-card">
@@ -433,19 +437,52 @@ function App() {
         </div>
 
         {/* ── SECTION 5: YTD & SIGNATURES ── */}
-        <div className="grid-2">
+        <div className="grid-2" style={{ gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)' }}>
           <section className="card glass">
             <div className="section-title"><TrendingUp size={16} /> YTD Accumulation</div>
-            <div className="input-group">
-              <label className="label">Previous Total Gross ($)</label>
-              <input type="number" value={profInfo.prevYtdGross} onChange={(e) => setProfInfo({ ...profInfo, prevYtdGross: e.target.value })} />
+            
+            <div className="grid-2" style={{ gap: '16px', marginBottom: '16px' }}>
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
+                <InputGroup label="Prev Total Gross ($)" type="number" value={profInfo.prevYtdGross} onChange={(v) => setProfInfo({ ...profInfo, prevYtdGross: v })} />
+                <div className="ytd-row mt-2">
+                  <span>New YTD Gross:</span>
+                  <strong className="accent">${(totals.newYtdGross || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                </div>
+              </div>
+              
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
+                <InputGroup label="Prev PR Hacienda ($)" type="number" value={profInfo.prevYtdPrWh} onChange={(v) => setProfInfo({ ...profInfo, prevYtdPrWh: v })} />
+                <div className="ytd-row mt-2">
+                  <span>New YTD PR Hacienda:</span>
+                  <strong className="accent" style={{ color: 'var(--red)' }}>${(totals.newYtdPrWh || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
+                <InputGroup label="Prev Net Pay ($)" type="number" value={profInfo.prevYtdNet} onChange={(v) => setProfInfo({ ...profInfo, prevYtdNet: v })} />
+                <div className="ytd-row mt-2">
+                  <span>New YTD Net Pay:</span>
+                  <strong className="accent" style={{ color: 'var(--green)' }}>${(totals.newYtdNet || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
+                <InputGroup label="Prev Est. Self-Emp ($)" type="number" value={profInfo.prevYtdSelfEmp} onChange={(v) => setProfInfo({ ...profInfo, prevYtdSelfEmp: v })} />
+                <div className="ytd-row mt-2">
+                  <span>New YTD Self-Emp Tax:</span>
+                  <strong className="accent" style={{ color: 'var(--amber)' }}>${(totals.newYtdSelfEmp || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                </div>
+              </div>
             </div>
-            <div className="ytd-row mt-2">
-              <span>New YTD Gross:</span>
-              <strong className="accent">${totals.newYtdGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-            </div>
-            <div className="ytd-row">
-              <span style={{color: 'var(--muted)'}}>Note: You pay 15.3% Self-Employment via 1040-PR explicitly on your own.</span>
+
+            <div className="ytd-row" style={{ marginTop: '16px', padding: '16px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '12px', borderLeft: '4px solid var(--amber)', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ color: '#fff', fontSize: '0.85rem' }}>
+                <AlertCircle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} color="var(--amber)" />
+                <strong>Savings Guide for IRS (1040-PR)</strong>
+              </div>
+              <span style={{ color: 'var(--text)', lineHeight: '1.4' }}>
+                Your Estimated Self-Employment Tax represents <strong>{(totals.selfEmpPercentOfNet || 0).toFixed(1)}%</strong> of your Actual Net Pay this week. Consider transferring this same percentage of your weekly net pay into a separate tax savings account.
+              </span>
             </div>
           </section>
 
