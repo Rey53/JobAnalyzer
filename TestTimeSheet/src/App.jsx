@@ -314,7 +314,10 @@ function App() {
                   <th>Day</th>
                   <th className="center">Date</th>
                   <th className="center">Hours</th>
-                  <th className="center">Project / Task</th>
+                  <th className="center">Start</th>
+                  <th className="center">Lunch Out</th>
+                  <th className="center">Lunch In</th>
+                  <th className="center">End</th>
                   <th>Work Description</th>
                 </tr>
               </thead>
@@ -343,33 +346,27 @@ function App() {
                         }} 
                       />
                     </td>
-                    <td className="center">
-                      <input 
-                        type="number" 
-                        min="0"
-                        step="0.25"
-                        style={{ width: '80px', textAlign: 'center', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px' }}
-                        value={entry.hours || ''} 
-                        onChange={(e) => {
-                          const newEntries = [...entries];
-                          newEntries[i].hours = e.target.value;
-                          setEntries(newEntries);
-                        }} 
-                      />
-                    </td>
-                    <td className="center">
-                      <input 
-                        type="text"
-                        placeholder="Project code..."
-                        value={entry.project || ''}
-                        style={{ width: '100%', minWidth: '120px', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px' }}
-                        onChange={(e) => {
-                          const newEntries = [...entries];
-                          newEntries[i].project = e.target.value;
-                          setEntries(newEntries);
-                        }}
-                      />
-                    </td>
+                    <td className={`center hours ${entry.hours > 0 ? 'active' : ''}`}>{parseFloat(entry.hours || 0).toFixed(2)}</td>
+                    <td className="center"><TimeSelect value={entry.start} onChange={(v) => {
+                      const newEntries = [...entries];
+                      newEntries[i].start = v;
+                      setEntries(newEntries);
+                    }} /></td>
+                    <td className="center"><TimeSelect value={entry.lunchOut} onChange={(v) => {
+                      const newEntries = [...entries];
+                      newEntries[i].lunchOut = v;
+                      setEntries(newEntries);
+                    }} /></td>
+                    <td className="center"><TimeSelect value={entry.lunchIn} onChange={(v) => {
+                      const newEntries = [...entries];
+                      newEntries[i].lunchIn = v;
+                      setEntries(newEntries);
+                    }} /></td>
+                    <td className="center"><TimeSelect value={entry.end} onChange={(v) => {
+                      const newEntries = [...entries];
+                      newEntries[i].end = v;
+                      setEntries(newEntries);
+                    }} /></td>
                     <td className="desc-cell">
                       <textarea 
                         value={entry.description} 
@@ -388,7 +385,7 @@ function App() {
                 <tr className="total-row">
                   <td colSpan="2">Weekly Total</td>
                   <td className="center total-hours-cell">{totals.totalHours} hrs</td>
-                  <td colSpan="2"></td>
+                  <td colSpan="5"></td>
                 </tr>
               </tfoot>
             </table>
@@ -491,6 +488,25 @@ function App() {
     </div>
   );
 }
+
+const TimeSelect = ({ value, onChange }) => {
+  const times = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const hh = h.toString().padStart(2, '0');
+      const mm = m.toString().padStart(2, '0');
+      const displayH = h % 12 || 12;
+      const ampm = h < 12 ? 'AM' : 'PM';
+      times.push({ val: `${hh}:${mm}`, label: `${displayH}:${mm} ${ampm}` });
+    }
+  }
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">--</option>
+      {times.map(t => <option key={t.val} value={t.val}>{t.label}</option>)}
+    </select>
+  );
+};
 
 function InputGroup({ label, type = "text", value, onChange, min }) {
   return (

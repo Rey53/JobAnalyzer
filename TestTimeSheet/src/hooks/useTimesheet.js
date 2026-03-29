@@ -31,7 +31,42 @@ function buildDates(weekStart) {
   });
 }
 
-// Removed calculateRowHours as requested for Independent Contractor timesheet flexibility
+function calculateRowHours(entry) {
+  const toMin = (t) => {
+    if (!t) return null;
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const start = toMin(entry.start);
+  const lout  = toMin(entry.lunchOut);
+  const lin   = toMin(entry.lunchIn);
+  const end   = toMin(entry.end);
+
+  // Case 1: Full day (Start + LunchOut + LunchIn + End)
+  if (start !== null && lout !== null && lin !== null && end !== null) {
+    const amMin = (lout > start) ? (lout - start) : 0;
+    const pmMin = (end > lin) ? (end - lin) : 0;
+    return (amMin + pmMin) / 60;
+  }
+
+  // Case 2: No lunch (Start + End only)
+  if (start !== null && end !== null && end > start) {
+    return (end - start) / 60;
+  }
+
+  // Case 3: Afternoon only (LunchIn + End)
+  if (lin !== null && end !== null && end > lin) {
+    return (end - lin) / 60;
+  }
+
+  // Case 4: Morning only (Start + LunchOut)
+  if (start !== null && lout !== null && lout > start) {
+    return (lout - start) / 60;
+  }
+
+  return 0;
+}
 
 export function useTimesheet() {
   const [loading, setLoading] = useState(true);
@@ -61,8 +96,10 @@ export function useTimesheet() {
     DAYS.map((day, i) => ({
       day,
       date: defaultDates[i],
-      hours: '',
-      project: '',
+      start: WEEKEND_INDICES.includes(i) ? '' : '08:00',
+      lunchOut: WEEKEND_INDICES.includes(i) ? '' : '12:00',
+      lunchIn: WEEKEND_INDICES.includes(i) ? '' : '13:00',
+      end: WEEKEND_INDICES.includes(i) ? '' : '17:00',
       description: ''
     }))
   );
@@ -74,7 +111,7 @@ export function useTimesheet() {
       try {
         const data = JSON.parse(saved);
         if (data.profInfo) setProfInfo(prev => ({ ...prev, ...data.profInfo }));
-        if (data.entries)  setEntries(data.entries);
+        if (data.entries) setEntries(data.entries);
       } catch (e) {
         console.error('LocalStorage restore failed', e);
       }
@@ -94,7 +131,7 @@ export function useTimesheet() {
     if (!profInfo.weekStart) return 1;
     const current = new Date(profInfo.weekStart + 'T00:00:00');
     const diffMs = current - WEEK_ONE_START;
-    const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+    const diffWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
     return Math.max(1, diffWeeks + 1);
   }, [profInfo.weekStart]);
 
@@ -116,8 +153,10 @@ export function useTimesheet() {
     setEntries(DAYS.map((day, i) => ({
       day,
       date: newDates[i],
-      hours: '',
-      project: '',
+      start: WEEKEND_INDICES.includes(i) ? '' : '08:00',
+      lunchOut: WEEKEND_INDICES.includes(i) ? '' : '12:00',
+      lunchIn: WEEKEND_INDICES.includes(i) ? '' : '13:00',
+      end: WEEKEND_INDICES.includes(i) ? '' : '17:00',
       description: ''
     })));
   };
@@ -126,21 +165,27 @@ export function useTimesheet() {
   const rolloverPrevWeek = () => navigateWeek(-1);
 
   // ── DERIVED CALCULATIONS (useMemo = no infinite loops) ──
+  const entriesWithHours = useMemo(() => {
+    return entries.map(e => ({
+      ...e,
+      hours: calculateRowHours(e)
+    }));
+  }, [entries]);
+
   const totals = useMemo(() => {
-    const totalHours = entries.reduce((acc, e) => acc + (parseFloat(e.hours) || 0), 0);
+    const totalHours = entriesWithHours.reduce((acc, e) => acc + e.hours, 0);
     const gross = totalHours * RATE;
 
     const prevGross = parseFloat(profInfo.prevYtdGross) || 0;
-    const prevNet   = parseFloat(profInfo.prevYtdNet) || 0;
+    const prevNet = parseFloat(profInfo.prevYtdNet) || 0;
     const totalYtdGross = prevGross + gross;
 
     const prSubject = Math.max(0, totalYtdGross - Math.max(EXEMPT_LIMIT, prevGross));
-    const prWh      = prSubject * PR_WH_RATE;
-    const ss        = gross * SS_RATE;
-    const medicare  = gross * MEDICARE_RATE;
-    
-    // Net Pay is explicitly Gross minus PR Hacienda (Since SS/Medicare are self-pay)
-    const net       = gross - prWh;
+    const prWh = prSubject * PR_WH_RATE;
+    const ss = gross * SS_RATE;
+    const medicare = gross * MEDICARE_RATE;
+    const totalRet = prWh + ss + medicare;
+    const net = gross - totalRet;
 
     return {
       totalHours: totalHours.toFixed(2),
@@ -148,12 +193,13 @@ export function useTimesheet() {
       prWh,
       ss,
       medicare,
+      totalRet,
       netPay: net,
       newYtdGross: totalYtdGross,
       newYtdNet: prevNet + net,
-      estimatedSelfEmp: ss + medicare
+      effectiveRate: gross > 0 ? (totalRet / gross) * 100 : 0
     };
-  }, [entries, profInfo.prevYtdGross, profInfo.prevYtdNet]);
+  }, [entriesWithHours, profInfo.prevYtdGross, profInfo.prevYtdNet]);
 
   // ── SAVE TO LOCAL STORAGE + TRIGGER SYNC ──
   useEffect(() => {
@@ -172,7 +218,7 @@ export function useTimesheet() {
     syncTimer.current = setTimeout(async () => {
       setSyncStatus('syncing');
       try {
-        const payload = { profInfo, entries, totals, generatedAt: new Date().toISOString() };
+        const payload = { profInfo, entries: entriesWithHours, totals, generatedAt: new Date().toISOString() };
 
         const { data: existing, error: selErr } = await supabase
           .from('timesheets')
@@ -202,14 +248,14 @@ export function useTimesheet() {
         console.error('Supabase Sync Error', e);
         setSyncStatus('error');
       }
-    }, 500);
+    }, 2000);
 
     return () => clearTimeout(syncTimer.current);
-  }, [profInfo, entries, totals, loading, syncStatus]);
+  }, [profInfo, entries, entriesWithHours, totals, loading, syncStatus]);
 
   return {
     profInfo, setProfInfo,
-    entries,
+    entries: entriesWithHours,
     setEntries,
     totals,
     syncStatus,
