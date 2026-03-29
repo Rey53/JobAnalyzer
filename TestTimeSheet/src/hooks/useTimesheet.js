@@ -31,42 +31,7 @@ function buildDates(weekStart) {
   });
 }
 
-function calculateRowHours(entry) {
-  const toMin = (t) => {
-    if (!t) return null;
-    const [h, m] = t.split(':').map(Number);
-    return h * 60 + m;
-  };
-
-  const start = toMin(entry.start);
-  const lout  = toMin(entry.lunchOut);
-  const lin   = toMin(entry.lunchIn);
-  const end   = toMin(entry.end);
-
-  // Case 1: Full day (Start + LunchOut + LunchIn + End)
-  if (start !== null && lout !== null && lin !== null && end !== null) {
-    const amMin = (lout > start) ? (lout - start) : 0;
-    const pmMin = (end > lin)    ? (end - lin)     : 0;
-    return (amMin + pmMin) / 60;
-  }
-
-  // Case 2: No lunch break (Start + End only)
-  if (start !== null && end !== null && end > start) {
-    return (end - start) / 60;
-  }
-
-  // Case 3: Afternoon only (LunchIn + End)
-  if (lin !== null && end !== null && end > lin) {
-    return (end - lin) / 60;
-  }
-
-  // Case 4: Morning only (Start + LunchOut)
-  if (start !== null && lout !== null && lout > start) {
-    return (lout - start) / 60;
-  }
-
-  return 0;
-}
+// Removed calculateRowHours as requested for Independent Contractor timesheet flexibility
 
 export function useTimesheet() {
   const [loading, setLoading] = useState(true);
@@ -96,10 +61,8 @@ export function useTimesheet() {
     DAYS.map((day, i) => ({
       day,
       date: defaultDates[i],
-      start: '',
-      lunchOut: '',
-      lunchIn: '',
-      end: '',
+      hours: '',
+      project: '',
       description: ''
     }))
   );
@@ -153,10 +116,8 @@ export function useTimesheet() {
     setEntries(DAYS.map((day, i) => ({
       day,
       date: newDates[i],
-      start: '',
-      lunchOut: '',
-      lunchIn: '',
-      end: '',
+      hours: '',
+      project: '',
       description: ''
     })));
   };
@@ -165,15 +126,8 @@ export function useTimesheet() {
   const rolloverPrevWeek = () => navigateWeek(-1);
 
   // ── DERIVED CALCULATIONS (useMemo = no infinite loops) ──
-  const entriesWithHours = useMemo(() => {
-    return entries.map(e => ({
-      ...e,
-      hours: calculateRowHours(e)
-    }));
-  }, [entries]);
-
   const totals = useMemo(() => {
-    const totalHours = entriesWithHours.reduce((acc, e) => acc + e.hours, 0);
+    const totalHours = entries.reduce((acc, e) => acc + (parseFloat(e.hours) || 0), 0);
     const gross = totalHours * RATE;
 
     const prevGross = parseFloat(profInfo.prevYtdGross) || 0;
@@ -184,8 +138,9 @@ export function useTimesheet() {
     const prWh      = prSubject * PR_WH_RATE;
     const ss        = gross * SS_RATE;
     const medicare  = gross * MEDICARE_RATE;
-    const totalRet  = prWh + ss + medicare;
-    const net       = gross - totalRet;
+    
+    // Net Pay is explicitly Gross minus PR Hacienda (Since SS/Medicare are self-pay)
+    const net       = gross - prWh;
 
     return {
       totalHours: totalHours.toFixed(2),
@@ -193,13 +148,12 @@ export function useTimesheet() {
       prWh,
       ss,
       medicare,
-      totalRet,
       netPay: net,
       newYtdGross: totalYtdGross,
       newYtdNet: prevNet + net,
-      effectiveRate: gross > 0 ? (totalRet / gross) * 100 : 0
+      estimatedSelfEmp: ss + medicare
     };
-  }, [entriesWithHours, profInfo.prevYtdGross, profInfo.prevYtdNet]);
+  }, [entries, profInfo.prevYtdGross, profInfo.prevYtdNet]);
 
   // ── SAVE TO LOCAL STORAGE + TRIGGER SYNC ──
   useEffect(() => {
@@ -218,7 +172,7 @@ export function useTimesheet() {
     syncTimer.current = setTimeout(async () => {
       setSyncStatus('syncing');
       try {
-        const payload = { profInfo, entries: entriesWithHours, totals, generatedAt: new Date().toISOString() };
+        const payload = { profInfo, entries, totals, generatedAt: new Date().toISOString() };
 
         const { data: existing, error: selErr } = await supabase
           .from('timesheets')
@@ -251,11 +205,11 @@ export function useTimesheet() {
     }, 500);
 
     return () => clearTimeout(syncTimer.current);
-  }, [profInfo, entries, entriesWithHours, totals, loading, syncStatus]);
+  }, [profInfo, entries, totals, loading, syncStatus]);
 
   return {
     profInfo, setProfInfo,
-    entries: entriesWithHours,
+    entries,
     setEntries,
     totals,
     syncStatus,

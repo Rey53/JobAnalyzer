@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useTimesheet } from './hooks/useTimesheet';
 import { supabase } from './lib/supabase';
+import { buildEmailHtml } from './lib/emailTemplate';
 import './App.css';
 
 function App() {
@@ -41,6 +42,86 @@ function App() {
   const [loginForm, setLoginForm] = useState({ user: '', pass: '' });
   const [loginError, setLoginError] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+
+  const sendTimesheet = async () => {
+    if (!profInfo.name || !profInfo.company || !profInfo.weekStart || !profInfo.recipientEmail) {
+      alert('⚠️ Please fill in all required fields (Name, Company, Week Start, Recipient Email)');
+      return;
+    }
+
+    setIsSending(true);
+
+    const fmt = (n) => `$${Number(n).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+    const payload = {
+      professionalName: profInfo.name,
+      company: profInfo.company,
+      title: profInfo.title,
+      weekStart: profInfo.weekStart,
+      supervisor: profInfo.supervisor,
+      projectCode: profInfo.projectCode,
+      comments: profInfo.comments,
+      profSignature: profInfo.profSignature,
+      profSignDate: profInfo.profSignDate,
+      supSignature: profInfo.supSignature,
+      supSignDate: profInfo.supSignDate,
+      days: entries.map(e => ({
+        day: e.day,
+        date: e.date,
+        project: e.project,
+        hours: (parseFloat(e.hours) || 0).toFixed(2),
+        desc: e.description
+      })),
+      rate: 53,
+      totalHours: totals.totalHours,
+      grossPay: fmt(totals.grossPay || 0),
+      grossPayRaw: totals.grossPay || 0,
+      prWithholding: fmt(totals.prWh || 0),
+      prWithholdingRaw: totals.prWh || 0,
+      socialSecurity: fmt(totals.ss || 0),
+      socialSecurityRaw: totals.ss || 0,
+      medicare: fmt(totals.medicare || 0),
+      medicareRaw: totals.medicare || 0,
+      totalRetentions: fmt(totals.prWh || 0),
+      totalRetentionsRaw: totals.prWh || 0,
+      netPay: fmt(totals.netPay || 0),
+      netPayRaw: totals.netPay || 0,
+      effectiveRate: '10.00%',
+      prevYtdGross: fmt(profInfo.prevYtdGross || 0),
+      newYtdGross: fmt(totals.newYtdGross || 0),
+      prevYtdNet: fmt(profInfo.prevYtdNet || 0),
+      newYtdNet: fmt(totals.newYtdNet || 0),
+
+      recipientEmail: profInfo.recipientEmail,
+      ccEmail: profInfo.ccEmail,
+
+      generatedAt: new Date().toISOString(),
+      tsNumber: profInfo.tsNumber || 1
+    };
+    
+    payload.emailHtml = buildEmailHtml(payload);
+
+    try {
+      const res = await fetch('https://n8ncon.servicioxpert.com/webhook/timesheet-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        alert('✅ Timesheet sent to ' + payload.recipientEmail);
+      } else {
+        const text = await res.text();
+        throw new Error('Server responded with ' + res.status + ': ' + text);
+      }
+    } catch (err) {
+      console.error('Send error:', err);
+      alert('⚠️ Error sending timesheet via n8n. Check console.');
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const checkLogin = async () => {
     setLoginError(false);
@@ -233,10 +314,7 @@ function App() {
                   <th>Day</th>
                   <th className="center">Date</th>
                   <th className="center">Hours</th>
-                  <th className="center">Start</th>
-                  <th className="center">Lunch Out</th>
-                  <th className="center">Lunch In</th>
-                  <th className="center">End</th>
+                  <th className="center">Project / Task</th>
                   <th>Work Description</th>
                 </tr>
               </thead>
@@ -265,27 +343,33 @@ function App() {
                         }} 
                       />
                     </td>
-                    <td className={`center hours ${entry.hours > 0 ? 'active' : ''}`}>{entry.hours.toFixed(2)}</td>
-                    <td className="center"><TimeSelect value={entry.start} onChange={(v) => {
-                      const newEntries = [...entries];
-                      newEntries[i].start = v;
-                      setEntries(newEntries);
-                    }} /></td>
-                    <td className="center"><TimeSelect value={entry.lunchOut} onChange={(v) => {
-                      const newEntries = [...entries];
-                      newEntries[i].lunchOut = v;
-                      setEntries(newEntries);
-                    }} /></td>
-                    <td className="center"><TimeSelect value={entry.lunchIn} onChange={(v) => {
-                      const newEntries = [...entries];
-                      newEntries[i].lunchIn = v;
-                      setEntries(newEntries);
-                    }} /></td>
-                    <td className="center"><TimeSelect value={entry.end} onChange={(v) => {
-                      const newEntries = [...entries];
-                      newEntries[i].end = v;
-                      setEntries(newEntries);
-                    }} /></td>
+                    <td className="center">
+                      <input 
+                        type="number" 
+                        min="0"
+                        step="0.25"
+                        style={{ width: '80px', textAlign: 'center', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px' }}
+                        value={entry.hours || ''} 
+                        onChange={(e) => {
+                          const newEntries = [...entries];
+                          newEntries[i].hours = e.target.value;
+                          setEntries(newEntries);
+                        }} 
+                      />
+                    </td>
+                    <td className="center">
+                      <input 
+                        type="text"
+                        placeholder="Project code..."
+                        value={entry.project || ''}
+                        style={{ width: '100%', minWidth: '120px', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px' }}
+                        onChange={(e) => {
+                          const newEntries = [...entries];
+                          newEntries[i].project = e.target.value;
+                          setEntries(newEntries);
+                        }}
+                      />
+                    </td>
                     <td className="desc-cell">
                       <textarea 
                         value={entry.description} 
@@ -304,7 +388,7 @@ function App() {
                 <tr className="total-row">
                   <td colSpan="2">Weekly Total</td>
                   <td className="center total-hours-cell">{totals.totalHours} hrs</td>
-                  <td colSpan="5"></td>
+                  <td colSpan="2"></td>
                 </tr>
               </tfoot>
             </table>
@@ -323,34 +407,25 @@ function App() {
           <PayCard 
             label="PR Hacienda (10%)" 
             value={totals.prWh} 
-            sub="PR Law Withholding" 
+            sub="Client Withheld" 
             color="var(--red)" 
             icon={<ShieldCheck size={16} />} 
             isNegative 
           />
           <PayCard 
-            label="Social Security" 
-            value={totals.ss} 
-            sub="FICA Tax (12.4%)" 
-            color="var(--amber)" 
-            icon={<CreditCard size={16} />} 
-            isNegative 
-          />
-          <PayCard 
-            label="Medicare" 
-            value={totals.medicare} 
-            sub="Tax Part A (2.9%)" 
-            color="var(--amber)" 
-            icon={<CreditCard size={16} />} 
-            isNegative 
-          />
-          <PayCard 
-            label="Net Pay" 
+            label="Actual Net Pay" 
             value={totals.netPay} 
-            sub="After All Retentions" 
+            sub="Amount Paid to You" 
             color="#fff" 
             icon={<CheckCircle2 size={16} />} 
             isStrong 
+          />
+          <PayCard 
+            label="Est. Self-Emp Tax" 
+            value={totals.estimatedSelfEmp} 
+            sub="15.3% to Save for IRS" 
+            color="var(--amber)" 
+            icon={<AlertCircle size={16} />} 
           />
         </div>
 
@@ -367,8 +442,7 @@ function App() {
               <strong className="accent">${totals.newYtdGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
             </div>
             <div className="ytd-row">
-              <span>Current Retention Rate:</span>
-              <strong>{totals.effectiveRate.toFixed(2)}%</strong>
+              <span style={{color: 'var(--muted)'}}>Note: You pay 15.3% Self-Employment via 1040-PR explicitly on your own.</span>
             </div>
           </section>
 
@@ -401,8 +475,12 @@ function App() {
         <section className="card glass actions-card">
           <div className="section-title">Finalize & Dispatch</div>
           <div className="btn-group">
-            <button className="btn-primary flex-2">
-              <Send size={18} /> Send via n8n Automation
+            <button 
+              className={`btn-primary flex-2 ${isSending ? 'disabled opacity-50 cursor-not-allowed' : ''}`}
+              onClick={sendTimesheet}
+              disabled={isSending}
+            >
+              <Send size={18} /> {isSending ? 'Sending via n8n...' : 'Send via n8n Automation'}
             </button>
             <button className="btn-primary btn-secondary flex-1" onClick={() => window.print()}>
               <Printer size={18} /> Print PDF
@@ -435,29 +513,6 @@ function PayCard({ label, value, sub, color, icon, isNegative, isStrong }) {
       </div>
       <div className="pc-sub">{sub}</div>
     </div>
-  );
-}
-
-function TimeSelect({ value, onChange }) {
-  const options = [''];
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 15) {
-      const hh = h.toString().padStart(2, '0');
-      const mm = m.toString().padStart(2, '0');
-      options.push(`${hh}:${mm}`);
-    }
-  }
-
-  return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}>
-      {options.map(opt => {
-        if (!opt) return <option key="empty" value="">--</option>;
-        const [h, m] = opt.split(':').map(Number);
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const dispH = h % 12 || 12;
-        return <option key={opt} value={opt}>{`${dispH}:${m.toString().padStart(2, '0')} ${ampm}`}</option>;
-      })}
-    </select>
   );
 }
 
