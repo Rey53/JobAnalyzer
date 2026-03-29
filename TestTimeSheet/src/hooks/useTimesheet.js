@@ -193,6 +193,7 @@ export function useTimesheet() {
       prWh,
       ss,
       medicare,
+      estimatedSelfEmp: ss + medicare,
       totalRet,
       netPay: net,
       newYtdGross: totalYtdGross,
