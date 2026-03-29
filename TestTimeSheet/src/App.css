@@ -263,6 +263,13 @@ select, option {
   color-scheme: dark;
 }
 
+/* Fix cropped AM/PM text in time dropdowns */
+.table-wrapper select {
+  min-width: 115px;
+  padding-left: 10px;
+  padding-right: 28px;
+}
+
 /* ── ROLLOVER BUTTON ── */
 .btn-rollover {
   background: linear-gradient(135deg, var(--amber), #d97706) !important;
