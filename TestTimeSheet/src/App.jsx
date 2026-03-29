@@ -252,10 +252,11 @@ function App() {
             <div className={`sync-indicator ${syncStatus}`}>
               <div className="status-dot"></div>
               <span>
-                {syncStatus === 'syncing' ? 'Syncing...' : 
-                 syncStatus === 'saved' ? 'Cloud Saved' : 
-                 syncStatus === 'error' ? 'Sync Failed' : 
-                 syncStatus === 'pending' ? 'Pending Sync' : 'Local Mode'}
+                {syncStatus === 'fetching' ? 'MySupabaseSH Loading...' :
+                 syncStatus === 'syncing' ? 'MySupabaseSH Syncing...' : 
+                 syncStatus === 'saved' ? 'MySupabaseSH Saved' : 
+                 syncStatus === 'error' ? 'MySupabaseSH Failed' : 
+                 syncStatus === 'pending' ? 'Pending MySupabaseSH Sync' : 'Local Mode'}
               </span>
             </div>
 

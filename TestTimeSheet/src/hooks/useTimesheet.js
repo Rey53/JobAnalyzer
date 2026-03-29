@@ -104,20 +104,55 @@ export function useTimesheet() {
     }))
   );
 
-  // ── LOCAL STORAGE RESTORE ON INIT ──
+  // ── LOAD INITIAL DATA (LocalStorage then Supabase) ──
   useEffect(() => {
-    const saved = localStorage.getItem('minimed_app_state_v2');
-    if (saved) {
+    async function init() {
+      setSyncStatus('fetching');
+
+      // 1. First try LocalStorage (fastest)
+      const saved = localStorage.getItem('minimed_app_state_v2');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          if (data.profInfo) setProfInfo(prev => ({ ...prev, ...data.profInfo }));
+          if (data.entries) setEntries(data.entries);
+        } catch (e) {
+          console.error('LocalStorage restore failed', e);
+        }
+      }
+
+      // 2. Then try Cloud (Supabase) to get most recent
       try {
-        const data = JSON.parse(saved);
-        if (data.profInfo) setProfInfo(prev => ({ ...prev, ...data.profInfo }));
-        if (data.entries) setEntries(data.entries);
+        const { data: { user } } = await supabase.auth.getUser();
+        const email = user?.email || profInfo.recipientEmail;
+
+        if (email) {
+          const { data: cloud, error } = await supabase
+            .from('timesheets')
+            .select('payload')
+            .eq('professional_email', email)
+            .eq('payload->>weekStart', profInfo.weekStart)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (cloud?.payload) {
+            setProfInfo(prev => ({ ...prev, ...cloud.payload.profInfo }));
+            setEntries(cloud.payload.entries);
+            setSyncStatus('saved');
+          } else {
+            setSyncStatus('idle');
+          }
+        }
       } catch (e) {
-        console.error('LocalStorage restore failed', e);
+        console.warn('Cloud fetch failed or no data found', e);
+        setSyncStatus('idle');
+      } finally {
+        setLoading(false);
       }
     }
-    setLoading(false);
-  }, []);
+    init();
+  }, [profInfo.weekStart]); // Re-fetch if week changes manually
 
   // ── AUTO-POPULATE DATES WHEN WEEK START CHANGES ──
   useEffect(() => {
@@ -204,7 +239,7 @@ export function useTimesheet() {
 
   // ── SAVE TO LOCAL STORAGE + TRIGGER SYNC ──
   useEffect(() => {
-    if (loading) return;
+    if (loading || syncStatus === 'fetching') return; // Don't save while loading or fetching
     localStorage.setItem('minimed_app_state_v2', JSON.stringify({ profInfo, entries }));
     setSyncStatus('pending');
   }, [entries, profInfo, loading]);
