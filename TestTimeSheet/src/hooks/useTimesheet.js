@@ -96,10 +96,10 @@ export function useTimesheet() {
     DAYS.map((day, i) => ({
       day,
       date: defaultDates[i],
-      start: WEEKEND_INDICES.includes(i) ? '' : '08:00',
-      lunchOut: WEEKEND_INDICES.includes(i) ? '' : '12:00',
-      lunchIn: WEEKEND_INDICES.includes(i) ? '' : '13:00',
-      end: WEEKEND_INDICES.includes(i) ? '' : '17:00',
+      start: '',
+      lunchOut: '',
+      lunchIn: '',
+      end: '',
       description: ''
     }))
   );
@@ -153,10 +153,10 @@ export function useTimesheet() {
     setEntries(DAYS.map((day, i) => ({
       day,
       date: newDates[i],
-      start: WEEKEND_INDICES.includes(i) ? '' : '08:00',
-      lunchOut: WEEKEND_INDICES.includes(i) ? '' : '12:00',
-      lunchIn: WEEKEND_INDICES.includes(i) ? '' : '13:00',
-      end: WEEKEND_INDICES.includes(i) ? '' : '17:00',
+      start: '',
+      lunchOut: '',
+      lunchIn: '',
+      end: '',
       description: ''
     })));
   };
@@ -248,7 +248,7 @@ export function useTimesheet() {
         console.error('Supabase Sync Error', e);
         setSyncStatus('error');
       }
-    }, 2000);
+    }, 500);
 
     return () => clearTimeout(syncTimer.current);
   }, [profInfo, entries, entriesWithHours, totals, loading, syncStatus]);
