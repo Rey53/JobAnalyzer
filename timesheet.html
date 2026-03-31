@@ -449,6 +449,29 @@
     .rollover-preview-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;
     }
+    .nav-arrow {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-arrow:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .hero-title-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
     .rollover-preview-item {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 8px; padding: 14px 16px;
@@ -536,8 +559,12 @@
   <div class="hero-top">
     <div class="logo-badge">🕐</div>
     <div>
-      <h1 id="page-title" style="font-size:1.8rem;">Weekly <span>Timesheet</span></h1>
-      <p>MiniMed Personal · Professional Services</p>
+      <div class="hero-title-container">
+        <button class="nav-arrow" onclick="prevWeek()" title="Previous Week">◀</button>
+        <h1 id="page-title" style="font-size:1.8rem; margin:0;">Weekly <span>Timesheet</span></h1>
+        <button class="nav-arrow" onclick="nextWeek()" title="Next Week">▶</button>
+      </div>
+      <p style="margin-top: 4px;">MiniMed Personal · Professional Services</p>
     </div>
     <div class="badge-pr">🇵🇷 Puerto Rico · PR Tax Withholding</div>
     <div id="sync-status"><div class="status-dot"></div><span id="sync-text">Check Connection</span></div>
@@ -1129,6 +1156,89 @@ function onWeekChange() {
     document.getElementById(`day-name-${i}`).textContent = dayLabel;
   });
   calcAll();
+}
+
+/* ── WEEK NAVIGATION ────────────────────────────────────────── */
+async function prevWeek() {
+  saveAppState(); // save current before navigating
+  const val = document.getElementById('week-start').value;
+  if (!val) return;
+  const monday = new Date(val + 'T00:00:00');
+  monday.setDate(monday.getDate() - 7);
+  document.getElementById('week-start').value = monday.toISOString().split('T')[0];
+  
+  const tsEl = document.getElementById('ts-number');
+  let n = parseInt(tsEl.value, 10) || 1;
+  if (n > 1) {
+    tsEl.value = n - 1;
+    localStorage.setItem('tsNumber', tsEl.value);
+  }
+  
+  onWeekChange();
+  
+  const userEl = document.getElementById('login-user');
+  if (userEl && userEl.value) {
+      const found = await fetchFromSupabase(userEl.value);
+      if (!found) {
+         showToast('⚠️ No saved data found for this past week.', 'error');
+         clearTimesheet(false);
+      }
+  } else {
+      clearTimesheet(false);
+  }
+}
+
+async function nextWeek() {
+  saveAppState(); // save current before navigating
+  
+  const newGrossStr = document.getElementById('ytd-new-gross').textContent.replace(/[^0-9.-]/g, '');
+  const newNetStr   = document.getElementById('ytd-new-net').textContent.replace(/[^0-9.-]/g, '');
+  const carryYtdGross = parseFloat(newGrossStr) || 0;
+  const carryYtdNet   = parseFloat(newNetStr) || 0;
+
+  const val = document.getElementById('week-start').value;
+  if (!val) return;
+  const monday = new Date(val + 'T00:00:00');
+  monday.setDate(monday.getDate() + 7);
+  document.getElementById('week-start').value = monday.toISOString().split('T')[0];
+  
+  const tsEl = document.getElementById('ts-number');
+  const n = parseInt(tsEl.value, 10) || 0;
+  tsEl.value = n + 1;
+  localStorage.setItem('tsNumber', tsEl.value);
+  
+  onWeekChange();
+  
+  const userEl = document.getElementById('login-user');
+  let found = false;
+  if (userEl && userEl.value) {
+      found = await fetchFromSupabase(userEl.value);
+  }
+  
+  if (!found) {
+      document.getElementById('prev-ytd-gross').value = carryYtdGross;
+      document.getElementById('prev-ytd-net').value   = carryYtdNet;
+      
+      clearTimesheet(true); 
+      localStorage.removeItem('supabase_row_id');
+      saveAppState();
+      showToast('🗓️ Started new week with carried-over YTD!', 'success');
+  }
+}
+
+function clearTimesheet(clearSignatures) {
+      for (let i = 0; i < 7; i++) {
+        document.getElementById(`start-${i}`).value = '';
+        document.getElementById(`lout-${i}`).value  = '';
+        document.getElementById(`lin-${i}`).value   = '';
+        document.getElementById(`end-${i}`).value   = '';
+        calcRow(i);
+      }
+      document.getElementById('comments').value = '';
+      if (clearSignatures) {
+          document.getElementById('prof-sig').value = '';
+          document.getElementById('sup-sig').value  = '';
+      }
 }
 
 /* ── ROLLOVER PREVIEW ───────────────────────────────────────── */
