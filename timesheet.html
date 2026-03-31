@@ -1,0 +1,1904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekly Timesheet — MiniMed Personal</title>
+  <meta name="description" content="Interactive weekly timesheet with PR tax withholding calculations and automated email delivery via n8n." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ======================================================
+       DESIGN SYSTEM / TOKENS
+    ====================================================== */
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --card:      #20243a;
+      --border:    #2e3350;
+      --accent:    #4f6ef7;
+      --accent2:   #7c5af7;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --amber:     #f59e0b;
+      --text:      #e8eaf2;
+      --muted:     #8891b4;
+      --radius:    12px;
+      --radius-sm: 6px;
+      --shadow:    0 4px 24px rgba(0,0,0,.55);
+      --rate:      53;  /* $/hr – used by JS */
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 80px;
+    }
+
+    /* ── TOP HERO BANNER ── */
+    .hero {
+      background: linear-gradient(135deg, #1e2a6e 0%, #12173b 60%, #1a0a3b 100%);
+      padding: 36px 40px 28px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, rgba(79,110,247,.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-top { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .logo-badge {
+      display: flex; align-items: center; justify-content: center;
+      width: 54px; height: 54px; border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      font-size: 24px; flex-shrink: 0;
+      box-shadow: 0 0 24px rgba(79,110,247,.5);
+    }
+    .hero h1 { font-size: 1.7rem; font-weight: 800; letter-spacing: -.5px; }
+    .hero h1 span { background: linear-gradient(90deg,#6b8bff,#a78bfa); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+    .badge-pr {
+      margin-left: auto;
+      background: rgba(79,110,247,.18);
+      border: 1px solid rgba(79,110,247,.4);
+      color: #a5b4fc;
+      font-size: .72rem; font-weight: 600; letter-spacing: .5px;
+      padding: 5px 12px; border-radius: 999px;
+    }
+
+    /* ── MAIN WRAPPER ── */
+    .main { max-width: 1280px; margin: 0 auto; padding: 40px 60px; }
+
+    /* ── SECTION CARD ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      transition: border-color .2s;
+    }
+    .card:focus-within { border-color: var(--accent); }
+
+    .section-title {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--muted);
+      display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+    }
+    .section-title::before {
+      content: '';
+      display: inline-block; width: 3px; height: 14px;
+      background: linear-gradient(var(--accent), var(--accent2));
+      border-radius: 2px;
+    }
+
+    /* ── FORM GRID ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    @media (max-width: 640px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+    label {
+      display: block;
+      font-size: .75rem; font-weight: 600; color: var(--muted);
+      margin-bottom: 6px; letter-spacing: .3px;
+    }
+    input[type=text], input[type=email], input[type=date], input[type=time],
+    select, textarea {
+      width: 100%; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--text); font-family: inherit;
+      font-size: .88rem; padding: 9px 12px;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,110,247,.18);
+    }
+    input[readonly] {
+      background: rgba(255,255,255,.04);
+      color: var(--muted); cursor: not-allowed;
+    }
+    textarea { min-height: 72px; resize: vertical; line-height: 1.5; }
+    select option { background: var(--surface); }
+
+    /* ── TIME TABLE ── */
+    .time-table-wrap { overflow-x: auto; position: relative; border-radius: 8px; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: .83rem;
+      table-layout: fixed; /* Ensures sticky alignment */
+    }
+    thead th {
+      background: var(--surface); color: var(--muted);
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; padding: 12px 8px; text-align: center;
+      border-bottom: 2px solid var(--border);
+    }
+    
+    /* Column Widths */
+    #ts-table th:nth-child(1) { width: 120px; text-align: left; } /* Day */
+    #ts-table th:nth-child(2) { width: 90px; }  /* Hours - Prominent */
+    #ts-table th:nth-child(3) { width: 130px; } /* Date */
+    #ts-table th:nth-child(4), #ts-table th:nth-child(5), #ts-table th:nth-child(6), #ts-table th:nth-child(7) { width: 105px; } /* Times */
+    #ts-table th:nth-child(8) { min-width: 200px; text-align: left; } /* Description */
+
+    /* Sticky Day Column */
+    #ts-table th:first-child,
+    #ts-table td:first-child {
+      position: sticky; left: 0; z-index: 20;
+      background: var(--surface); border-right: 1px solid var(--border);
+    }
+    #ts-table td:first-child { background: var(--card); }
+
+    /* Sticky Result Column (Hours) */
+    #ts-table th:nth-child(2),
+    #ts-table td:nth-child(2) {
+      position: sticky; left: 120px; z-index: 10;
+      background: var(--surface); border-right: 2px solid var(--border);
+      box-shadow: 4px 0 10px rgba(0,0,0,0.2);
+    }
+    #ts-table td:nth-child(2) { background: rgba(30, 36, 60, 0.95); backdrop-filter: blur(4px); }
+
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background .15s; }
+    tbody tr:hover { background: rgba(255,255,255,.03); }
+    tbody td { padding: 14px 12px; text-align: center; vertical-align: middle; }
+
+    .day-label {
+      font-weight: 600; font-size: .82rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent); flex-shrink: 0;
+    }
+    .dot.weekend { background: var(--muted); }
+
+    .hours-cell {
+      font-weight: 800; font-size: 1.15rem;
+      color: var(--green); text-shadow: 0 0 10px rgba(34,197,94,0.3);
+    }
+    .hours-cell.zero { color: var(--muted); opacity: 0.5; text-shadow: none; }
+
+    table select {
+      width: 100%; max-width: 95px; padding: 7px 4px; text-align: center; cursor: pointer;
+    }
+    table input[type=date] { width: 100%; max-width: 120px; padding: 7px 8px; }
+    table textarea {
+      min-height: 42px; font-size: .78rem; padding: 8px;
+      width: 100%; min-width: 200px;
+    }
+
+    /* ── TOTAL HOURS BANNER (Enhanced) ── */
+    .total-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 20px;
+      background: rgba(26, 29, 39, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius); padding: 30px 40px;
+      margin-bottom: 35px;
+      -webkit-background-clip: padding-box;
+      background-clip: padding-box;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); top: 10px; z-index: 100;
+      transition: all .3s ease;
+    }
+    .total-banner .label { font-size: .75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .total-banner .value { 
+      font-size: 3.2rem; font-weight: 900; line-height: 1;
+      background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      display: flex; align-items: baseline;
+    }
+    .total-banner .value span { font-size: 1.1rem; color: var(--muted); -webkit-text-fill-color: var(--muted); margin-left: 6px; font-weight: 600; }
+
+    /* ── PAY SUMMARY CARDS ── */
+    .pay-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;
+      margin-bottom: 20px;
+    }
+    .pay-item {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 20px;
+      transition: transform .2s, border-color .2s;
+    }
+    .pay-item:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .pay-item .pi-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 6px; }
+    .pay-item .pi-value { font-size: 1.55rem; font-weight: 800; color: var(--text); }
+    .pay-item .pi-value.green { color: var(--green); }
+    .pay-item .pi-value.red   { color: var(--red); }
+    .pay-item .pi-value.amber { color: var(--amber); }
+    .pay-item .pi-sub { font-size: .72rem; color: var(--muted); margin-top: 3px; }
+
+    /* ── WITHHOLDING BREAKDOWN ── */
+    .wh-table { width: 100%; }
+    .wh-table tr td { padding: 6px 0; font-size: .85rem; }
+    .wh-table tr td:last-child { text-align: right; font-weight: 600; }
+    .wh-table .total-row td { border-top: 1px solid var(--border); padding-top: 12px; font-weight: 700; font-size: .95rem; }
+    .wh-tag {
+      display: inline-block; font-size: .65rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 999px;
+      background: rgba(79,110,247,.18); color: #a5b4fc;
+      margin-left: 6px; letter-spacing: .3px;
+    }
+
+    /* ── COMMENTS ── */
+    .comments-wrap { margin-bottom: 20px; }
+
+    /* ── SIGNATURE GRID ── */
+    .sig-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    }
+    @media(max-width:520px) { .sig-grid { grid-template-columns: 1fr; } }
+
+    /* ── SEND BUTTON ── */
+    .btn-send {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 15px 24px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; font-family: inherit; font-size: 1rem; font-weight: 700;
+      border: none; border-radius: var(--radius); cursor: pointer;
+      letter-spacing: .3px;
+      box-shadow: 0 4px 20px rgba(79,110,247,.45);
+      transition: opacity .2s, transform .15s, box-shadow .2s;
+    }
+    .btn-send:hover { opacity:.92; transform: translateY(-1px); box-shadow: 0 6px 28px rgba(79,110,247,.55); }
+    .btn-send:active { transform: translateY(0); }
+    .btn-send:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--text); font-size: .85rem; font-weight: 500;
+      padding: 12px 22px; border-radius: 999px; box-shadow: var(--shadow);
+      transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+      opacity: 0; z-index: 9999; white-space: nowrap;
+      display: flex; align-items: center; gap: 8px;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    #toast.success { border-color: var(--green); }
+    #toast.error   { border-color: var(--red); }
+
+    /* ── VALIDATION HIGHLIGHT ── */
+    input.invalid, select.invalid, textarea.invalid {
+      border-color: var(--red) !important;
+      box-shadow: 0 0 0 3px rgba(239,68,68,.18) !important;
+    }
+
+    /* ── WEEK TAG ── */
+    .week-tag {
+      font-size: .75rem; color: var(--muted); margin-left: auto;
+      font-weight: 500;
+    }
+
+    /* ── RATE BADGE ── */
+    .rate-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3);
+      color: #4ade80; font-size: .75rem; font-weight: 700;
+      padding: 4px 12px; border-radius: 999px; margin-left: 8px;
+    }
+
+    .btn-logout {
+      margin-left: 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      font-size: .7rem; font-weight: 700;
+      padding: 5px 14px; border-radius: 999px;
+      cursor: pointer;
+      text-transform: uppercase; letter-spacing: 1px;
+      transition: all .2s;
+    }
+    .btn-logout:hover {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+    }
+
+    /* ── SPINNER ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .7s linear infinite; display: none;
+    }
+    .btn-send.loading .spinner { display: block; }
+    .btn-send.loading .btn-label { display: none; }
+
+    /* ── INFO BUBBLE ── */
+    .info-note {
+      background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25);
+      border-radius: var(--radius-sm); padding: 10px 14px;
+      font-size: .78rem; color: #fbbf24; margin-bottom: 20px;
+      display: flex; gap: 8px; align-items: flex-start;
+    }
+    .info-note svg { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── LOGIN OVERLAY ── */
+    #login-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: var(--bg); display: flex; align-items: center; justify-content: center;
+      z-index: 99999; padding: 20px;
+      transition: opacity 0.4s ease, visibility 0.4s;
+    }
+    .login-box {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 40px; width: 100%; max-width: 420px;
+      box-shadow: var(--shadow); text-align: center;
+    }
+    .login-box img { max-width: 100%; height: auto; margin-bottom: 24px; }
+    .login-box h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; color: #fff; }
+    .login-error { color: var(--red); font-size: 0.85rem; margin-top: 16px; font-weight: 600; display: none; }
+
+    /* ── PRINT STYLES ── */
+    @media print {
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body { background: #fff !important; color: #111 !important; padding: 0 !important; font-size: 11pt !important; }
+      .hero { 
+        background: #fff !important; color: #111 !important; padding: 16px 20px !important; 
+        border-bottom: 2px solid #333 !important; margin-bottom: 10px !important;
+      }
+      .hero::after { display: none !important; }
+      .hero h1 { font-size: 1.3rem !important; }
+      .hero h1 span { -webkit-text-fill-color: #111 !important; background: none !important; }
+      .hero *, .hero-top * { color: #111 !important; }
+      .hero p { color: #555 !important; }
+      .badge-pr, .logo-badge, .btn-send, .btn-logout, .info-note, #toast, #login-overlay, .spinner, .dot, .rollover-modal-overlay { display: none !important; }
+      #app-wrapper { display: block !important; opacity: 1 !important; visibility: visible !important; }
+      .main { padding: 10px 20px !important; }
+      .card { 
+        box-shadow: none !important; border: 1px solid #bbb !important; 
+        border-radius: 4px !important; margin-bottom: 12px !important; 
+        break-inside: avoid; background: #fff !important; padding: 14px 16px !important;
+      }
+      .total-banner { background: #f5f5f5 !important; border: 1px solid #333 !important; color: #111 !important; padding: 12px 16px !important; }
+      .total-banner .label { color: #555 !important; }
+      .total-banner .value { color: #111 !important; -webkit-text-fill-color: initial !important; font-size: 1.6rem !important; }
+      .total-banner .value span { color: #555 !important; }
+      .pay-grid { gap: 8px !important; grid-template-columns: repeat(3, 1fr) !important; }
+      .pay-item { border: 1px solid #bbb !important; transform: none !important; background: #fff !important; padding: 10px 12px !important; }
+      .pay-item:hover { transform: none !important; }
+      .pi-label { color: #555 !important; }
+      .pi-value { color: #111 !important; font-size: 1.2rem !important; }
+      .pi-value.green { color: #15803d !important; }
+      .pi-value.red { color: #b91c1c !important; }
+      .pi-value.amber { color: #b45309 !important; }
+      .pi-sub { color: #777 !important; }
+      .wh-tag { background: #e5e7eb !important; color: #333 !important; border: 1px solid #ccc !important; }
+      /* Replace form elements with their text values */
+      .print-value { display: inline !important; font-weight: 600; color: #111; font-size: 13px; }
+      .print-hide { display: none !important; }
+      input, select, textarea { 
+        border: none !important; background: transparent !important; color: #111 !important; 
+        padding: 2px 0 !important; -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  cursor: pointer; -webkit-appearance: none !important;
+        resize: none !important; font-size: 11pt !important; box-shadow: none !important;
+        overflow: visible !important; height: auto !important;
+      }
+      select { -moz-appearance: none !important; text-indent: 0.01px !important; }
+      thead th { background: #e5e7eb !important; color: #111 !important; border-bottom: 2px solid #333 !important; padding: 6px 4px !important; font-size: 8pt !important; }
+      tbody td { border-bottom: 1px solid #ddd !important; padding: 5px 4px !important; font-size: 10pt !important; }
+      .hours-cell { color: #111 !important; font-weight: 800 !important; }
+      .hours-cell.zero { color: #999 !important; }
+      .section-title { color: #333 !important; border-bottom: 1px solid #ddd !important; padding-bottom: 5px !important; font-size: 9pt !important; }
+      .section-title::before { background: #333 !important; }
+      .wh-table tr td { font-size: 10pt !important; color: #111 !important; }
+      .wh-table .total-row td { border-top: 2px solid #333 !important; font-size: 11pt !important; }
+      .sig-grid { gap: 16px !important; }
+      .sig-grid label { color: #555 !important; }
+      /* Page layout */
+      @page { size: letter; margin: 0.5in; }
+      .comments-wrap { break-inside: avoid; }
+    }
+
+    /* ── ROLLOVER PREVIEW MODAL ── */
+    .rollover-modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 99998; padding: 20px;
+      opacity: 0; visibility: hidden; transition: all .3s;
+    }
+    .rollover-modal-overlay.active { opacity: 1; visibility: visible; }
+    .rollover-modal {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px; width: 100%; max-width: 560px;
+      box-shadow: 0 12px 48px rgba(0,0,0,.6);
+      transform: translateY(20px); transition: transform .3s;
+    }
+    .rollover-modal-overlay.active .rollover-modal { transform: translateY(0); }
+    .rollover-modal h3 {
+      font-size: 1.2rem; font-weight: 800; margin-bottom: 6px;
+      background: linear-gradient(90deg, #6b8bff, #a78bfa);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .rollover-modal .modal-subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 24px; }
+    .rollover-preview-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;
+    }
+    .rollover-preview-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px 16px;
+    }
+    .rollover-preview-item .rp-label {
+      font-size: .68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--muted); margin-bottom: 6px;
+    }
+    .rollover-preview-item .rp-value {
+      font-size: 1.15rem; font-weight: 800; color: var(--text);
+    }
+    .rollover-preview-item .rp-value.green { color: var(--green); }
+    .rollover-preview-item .rp-value.purple { color: #818cf8; }
+    .rollover-preview-item .rp-value.amber { color: var(--amber); }
+    .rollover-arrow {
+      display: flex; align-items: center; gap: 8px; font-size: .82rem;
+      color: var(--muted); margin-bottom: 12px;
+    }
+    .rollover-arrow .from { color: var(--muted); }
+    .rollover-arrow .arrow { color: var(--accent); font-weight: 800; font-size: 1rem; }
+    .rollover-arrow .to { color: var(--green); font-weight: 700; }
+    .modal-actions {
+      display: flex; gap: 12px; margin-top: 8px;
+    }
+    .modal-actions button {
+      flex: 1; padding: 12px 20px; border-radius: 8px; font-family: inherit;
+      font-size: .9rem; font-weight: 700; cursor: pointer; border: none;
+      transition: all .2s;
+    }
+    .modal-btn-cancel {
+      background: var(--surface); border: 1px solid var(--border) !important;
+      color: var(--muted);
+    }
+    .modal-btn-cancel:hover { border-color: var(--accent) !important; color: var(--text); }
+    .modal-btn-confirm {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; box-shadow: 0 4px 16px rgba(79,110,247,.4);
+    }
+    .modal-btn-confirm:hover { opacity: .9; transform: translateY(-1px); }
+
+    /* ── SYNC STATUS INDICATOR ── */
+    #sync-status {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      padding: 5px 14px; border-radius: 999px;
+      font-size: .7rem; font-weight: 700; color: var(--muted);
+      margin-left: auto; transition: all .3s;
+    }
+    #sync-status.syncing { color: var(--amber); border-color: rgba(245,158,11,0.3); }
+    #sync-status.saved   { color: var(--green); border-color: rgba(34,197,94,0.3); }
+    #sync-status.error   { color: var(--red); border-color: rgba(239,68,68,0.3); }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    #sync-status.syncing .status-dot { animation: pulse 1s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: .4; } 100% { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+<!-- ████ LOGIN OVERLAY ████ -->
+<div id="login-overlay">
+  <div class="login-box">
+    <!-- Place the logo image in the same folder named logo.png -->
+    <img src="logo.png" id="login-logo" alt="EQVAL Group Logo" onerror="this.src=''; this.style.display='none';" />
+    <h2>Authorized Access</h2>
+    <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 24px;">Please login to view timesheet</p>
+    
+    <label for="login-user" style="text-align: left; margin-top: 10px;">Email Address</label>
+    <input type="email" id="login-user" placeholder="Enter your email" autocomplete="username" />
+    
+    <label for="login-pass" style="text-align: left; margin-top: 10px;">Password</label>
+    <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password" />
+    
+    <button class="btn-send" onclick="checkLogin()" style="margin-top: 20px;">
+      <span class="btn-label">Login to Timesheet</span>
+    </button>
+    <div id="login-error" class="login-error">Incorrect Username or Password!</div>
+  </div>
+</div>
+
+<!-- MAIN APP WRAPPER (HIDDEN BY DEFAULT) -->
+<div id="app-wrapper" style="display: none; opacity: 0; transition: opacity 0.5s;">
+
+<!-- ████ HERO ████ -->
+<div class="hero">
+  <div class="hero-top">
+    <div class="logo-badge">🕐</div>
+    <div>
+      <h1 id="page-title" style="font-size:1.8rem;">Weekly <span>Timesheet</span></h1>
+      <p>MiniMed Personal · Professional Services</p>
+    </div>
+    <div class="badge-pr">🇵🇷 Puerto Rico · PR Tax Withholding</div>
+    <div id="sync-status"><div class="status-dot"></div><span id="sync-text">Check Connection</span></div>
+    <button class="btn-logout" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- INFO NOTE -->
+  <div class="info-note">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+    <span>Rate: <strong>Applied</strong> · PR Withholding: <strong>10%</strong> (Hacienda – Independent Contractor) · Both PR &amp; Federal retention applied automatically.</span>
+  </div>
+
+  <!-- ████ SECTION 1 – HEADER INFO ████ -->
+  <div class="card">
+    <div class="section-title">Professional &amp; Project Info</div>
+    <div class="grid-2" style="gap:14px">
+      <div>
+        <label for="prof-name">Professional (Employee) Name</label>
+        <input type="text" id="prof-name" value="Luis G. Reyes Morales" />
+      </div>
+      <div>
+        <label for="company">Company / Client</label>
+        <input type="text" id="company" value="MiniMed – Juncos" />
+      </div>
+      <div>
+        <label for="title">Job Title / Role</label>
+        <input type="text" id="title" value="Sr. Quality Engineer" />
+      </div>
+      <div>
+        <label for="week-start">Week Starting (Monday)</label>
+        <input type="date" id="week-start" />
+      </div>
+      <div>
+        <label for="supervisor">Supervisor Name</label>
+        <input type="text" id="supervisor" value="Charlene González" />
+      </div>
+      <div>
+        <label for="proj-code">Project / PO Code</label>
+        <input type="text" id="proj-code" value="EQValPR" />
+      </div>
+      <div>
+        <label for="ts-number">Timesheet # (Auto-increments)</label>
+        <input type="number" id="ts-number" value="1" oninput="updateEnumaration()" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ████ SECTION 3 – PAY SUMMARY (MOVED UP FOR VISIBILITY) ████ -->
+  <div class="total-banner">
+    <div>
+      <div class="label">Total Hours This Week</div>
+      <div class="value" id="banner-hours">0.00 <span>hrs</span></div>
+    </div>
+    <div style="text-align:right">
+      <div class="label">Gross Pay (TOTAL HOURS × Rate)</div>
+      <div class="value" id="banner-gross" style="background:linear-gradient(90deg,#818cf8,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">$0.00</div>
+    </div>
+  </div>
+
+  <!-- ████ SECTION 2 – DAILY TIME ENTRIES ████ -->
+  <div class="card">
+    <div class="section-title" style="justify-content:space-between">
+      <span>Daily Time Entries</span>
+      <span class="rate-badge">💵 Standard Rate</span>
+    </div>
+    <div class="time-table-wrap">
+      <table id="ts-table">
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>Hours</th>
+            <th>Date</th>
+            <th>Start</th>
+            <th>Lunch Out</th>
+            <th>Lunch In</th>
+            <th>End</th>
+            <th style="min-width:200px;text-align:left">Work Description</th>
+          </tr>
+        </thead>
+        <tbody id="ts-body">
+          <!-- rows injected by JS -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td style="text-align:right;font-size:.72rem;font-weight:700;color:var(--muted);padding:12px 6px;text-transform:uppercase;">TOTAL</td>
+            <td id="total-hours-cell" style="text-align:center;font-size:1.4rem;font-weight:900;color:var(--green);padding:12px 6px;">0.00</td>
+            <td colspan="6"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="pay-grid">
+    <div class="pay-item">
+      <div class="pi-label">Gross Pay</div>
+      <div class="pi-value green" id="sum-gross">$0.00</div>
+      <div class="pi-sub">Total hrs × Rate</div>
+    </div>
+    <div class="pay-item">
+      <div class="pi-label">PR Withholding <span class="wh-tag">10%</span></div>
+      <div class="pi-value red" id="sum-pr-wh">-$0.00</div>
+      <div class="pi-sub">Hacienda – Independiente</div>
+    </div>
+    <div class="pay-item">
+      <div class="pi-label">Fed FICA SS <span class="wh-tag">12.4%</span></div>
+      <div class="pi-value amber" id="sum-ss">-$0.00</div>
+      <div class="pi-sub">Social Security (FICA)</div>
+    </div>
+    <div class="pay-item">
+      <div class="pi-label">Medicare <span class="wh-tag">2.9%</span></div>
+      <div class="pi-value amber" id="sum-medicare">-$0.00</div>
+      <div class="pi-sub">Medicare Part A</div>
+    </div>
+    <div class="pay-item" style="border-color:var(--green)">
+      <div class="pi-label">Net Pay</div>
+      <div class="pi-value green" id="sum-net">$0.00</div>
+      <div class="pi-sub">After all withholdings</div>
+    </div>
+    <div class="pay-item">
+      <div class="pi-label">Total Retentions</div>
+      <div class="pi-value red" id="sum-total-ret">-$0.00</div>
+      <div class="pi-sub">PR + SS + Medicare</div>
+    </div>
+  </div>
+
+  <!-- Withholding breakdown card -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="section-title">PR Tax Withholding Breakdown</div>
+    <table class="wh-table">
+      <tbody>
+        <tr>
+          <td>Gross Pay (TOTAL HOURS × Rate)</td>
+          <td id="wh-gross">$0.00</td>
+        </tr>
+        <tr>
+          <td>
+            PR Hacienda Withholding
+            <span class="wh-tag">10% · Independiente</span>
+          </td>
+          <td id="wh-pr" style="color:var(--red)">-$0.00</td>
+        </tr>
+        <tr>
+          <td>
+            Social Security (FICA)
+            <span class="wh-tag">12.4%</span>
+          </td>
+          <td id="wh-ss" style="color:var(--amber)">-$0.00</td>
+        </tr>
+        <tr>
+          <td>
+            Medicare
+            <span class="wh-tag">2.9%</span>
+          </td>
+          <td id="wh-med" style="color:var(--amber)">-$0.00</td>
+        </tr>
+        <tr class="total-row">
+          <td>Net Amount to Professional</td>
+          <td id="wh-net" style="color:var(--green)">$0.00</td>
+        </tr>
+        <tr>
+          <td style="color:var(--muted);font-size:.75rem;padding-top:8px">
+            Effective Total Retention Rate
+          </td>
+          <td id="wh-eff" style="color:var(--muted);font-size:.8rem;">0.00%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ████ SECTION 4 – YTD ACCUMULATION & $500 PR EXEMPTION ████ -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="section-title">YTD Accumulation & $500 PR Exemption</div>
+    <div style="font-size:13px; color:var(--muted); margin-bottom:12px; line-height:1.4;">
+      The first $500 of income in the year (beginning 03/30/2026) is exempt from PR Hacienda Withholding. Enter your previous accumulations here.
+    </div>
+    <div class="dates-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:16px;">
+      <div class="input-group">
+        <label>Previous YTD Gross Pay ($)</label>
+        <input type="number" id="prev-ytd-gross" value="0.00" step="0.01" onchange="calcAll()" style="width:100%;font-size:16px;background:var(--page-bg);" />
+      </div>
+      <div class="input-group">
+        <label>Previous YTD Net Pay ($)</label>
+        <input type="number" id="prev-ytd-net" value="0.00" step="0.01" onchange="calcAll()" style="width:100%;font-size:16px;background:var(--page-bg);" />
+      </div>
+    </div>
+    <div style="padding-top:12px; border-top:1px solid #2e3350; font-size:14px; font-weight:500;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+        <span style="color:var(--text)">Current Week Gross:</span>
+        <span id="ytd-curr-gross" style="color:var(--green)">$0.00</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+        <span style="color:var(--text)">New YTD Gross Pay:</span>
+        <span id="ytd-new-gross" style="color:#818cf8; font-size:16px; font-weight:700;">$0.00</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+        <span style="color:var(--text)">Current Week Net:</span>
+        <span id="ytd-curr-net" style="color:var(--green)">$0.00</span>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span style="color:var(--text)">New YTD Net Pay:</span>
+        <span id="ytd-new-net" style="color:#818cf8; font-size:16px; font-weight:700;">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ████ SECTION 5 – COMMENTS ████ -->
+  <div class="card comments-wrap">
+    <div class="section-title">Comments / Observations</div>
+    <textarea id="comments" placeholder="Add any notes, observations, or special remarks for this week..."></textarea>
+  </div>
+
+  <!-- ████ SECTION 5 – SIGNATURES ████ -->
+  <div class="card">
+    <div class="section-title">Signatures</div>
+    <div class="sig-grid">
+      <div>
+        <label for="prof-sig">Professional Name (signature)</label>
+        <input type="text" id="prof-sig" placeholder="Type full legal name" />
+        <label for="prof-date" style="margin-top:10px">Date Signed</label>
+        <input type="date" id="prof-date" />
+      </div>
+      <div>
+        <label for="sup-sig">Supervisor Name (signature)</label>
+        <input type="text" id="sup-sig" placeholder="Type full legal name" />
+        <label for="sup-date" style="margin-top:10px">Date Signed</label>
+        <input type="date" id="sup-date" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ████ SECTION 6 – SEND VIA EMAIL ████ -->
+  <div class="card">
+    <div class="section-title">Send Timesheet via Email</div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div>
+        <label for="send-to">Recipient Email</label>
+        <input type="email" id="send-to" value="reyenergybroker@gmail.com" />
+      </div>
+      <div>
+        <label for="send-cc">CC (optional)</label>
+        <input type="email" id="send-cc" placeholder="supervisor@company.com" />
+      </div>
+    </div>
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <button class="btn-send" id="btn-send" onclick="sendTimesheet()" style="flex:2; min-width:250px;">
+        <div class="spinner"></div>
+        <span class="btn-label">✉️ &nbsp; Send Timesheet via n8n</span>
+      </button>
+      <button class="btn-send" onclick="printTimesheet()" style="flex:1; min-width:180px; background:var(--surface); border:1px solid var(--accent); color:#a5b4fc;">
+        <span class="btn-label">🖨️ &nbsp; Print &nbsp; / &nbsp; Save PDF</span>
+      </button>
+      <button class="btn-send" onclick="showRolloverPreview()" style="flex:1; min-width:200px; background:var(--surface); border:1px solid #4f6ef7; color:#a5b4fc;">
+        <span class="btn-label">⏭️ &nbsp; Rollover Next Week</span>
+      </button>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app-wrapper -->
+
+<!-- Rollover Preview Modal -->
+<div class="rollover-modal-overlay" id="rollover-modal">
+  <div class="rollover-modal">
+    <h3>⏭️ Rollover to Next Week</h3>
+    <div class="modal-subtitle">Preview what will change when you advance to the next week.</div>
+    
+    <div class="rollover-arrow">
+      <span class="from" id="rv-week-from">Week of 03/30/2026</span>
+      <span class="arrow">→</span>
+      <span class="to" id="rv-week-to">Week of 04/06/2026</span>
+    </div>
+
+    <div class="rollover-preview-grid">
+      <div class="rollover-preview-item">
+        <div class="rp-label">Current Timesheet #</div>
+        <div class="rp-value" id="rv-ts-from">#1</div>
+      </div>
+      <div class="rollover-preview-item">
+        <div class="rp-label">Next Timesheet #</div>
+        <div class="rp-value green" id="rv-ts-to">#2</div>
+      </div>
+      <div class="rollover-preview-item">
+        <div class="rp-label">Current YTD Gross</div>
+        <div class="rp-value" id="rv-ytd-gross-from">$0.00</div>
+      </div>
+      <div class="rollover-preview-item">
+        <div class="rp-label">New YTD Gross (Rollover)</div>
+        <div class="rp-value purple" id="rv-ytd-gross-to">$0.00</div>
+      </div>
+      <div class="rollover-preview-item">
+        <div class="rp-label">Current YTD Net</div>
+        <div class="rp-value" id="rv-ytd-net-from">$0.00</div>
+      </div>
+      <div class="rollover-preview-item">
+        <div class="rp-label">New YTD Net (Rollover)</div>
+        <div class="rp-value purple" id="rv-ytd-net-to">$0.00</div>
+      </div>
+    </div>
+
+    <div style="background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.25); border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:.82rem; color:#fbbf24;">
+      ⚠️ This will <strong>clear all time entries</strong>, advance the week date by 7 days, increment the timesheet number, and roll your YTD values forward.
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="closeRolloverPreview()">Cancel</button>
+      <button class="modal-btn-confirm" onclick="confirmRollover()">✅ Confirm Rollover</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Supabase JS Client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+/* ── SUPABASE CONFIG ────────────────────────────────── */
+const SUPABASE_URL = 'https://mysupa.servicioxpert.com';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzM4ODg0NzIsImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSJ9.BfF_As2-X-NBoDh2RnojWRIw3r1XjIEgfM8quNhtKXI';
+
+// Use 'sb' to avoid name collision with the global 'supabase' from the CDN script
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ── LOGIN LOGIC ────────────────────────────────────── */
+async function checkLogin() {
+  const u = document.getElementById('login-user').value.trim(); // Email
+  const p = document.getElementById('login-pass').value.trim(); // Password
+  const err = document.getElementById('login-error');
+  const btn = document.querySelector('#login-overlay .btn-send');
+  
+  // 1. Hardcoded Override (Master Key)
+  if (u === 'EqvalAdmin' && p === 'Eqval2026!') {
+    revealApp();
+    return;
+  }
+
+  // 2. Supabase Auth
+  btn.disabled = true;
+  btn.innerText = "Authenticating...";
+
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: u,
+    password: p,
+  });
+
+  if (!error) {
+    // 3. Clear existing states before loading from cloud
+    localStorage.removeItem('supabase_row_id');
+    localStorage.removeItem('minimed_app_state');
+    
+    // 4. Reveal App and Sync from Cloud
+    revealApp();
+    await fetchFromSupabase(u); 
+  } else {
+    console.error("Supabase Login Error:", error);
+    if (error.message === "Invalid login credentials") {
+       err.innerText = "Incorrect Email or Password!";
+    } else if (error.message === "Email not confirmed") {
+       err.innerText = "⚠️ Email not confirmed! Please check your email or disable 'Confirm Email' in Supabase Dashboard.";
+    } else {
+       err.innerText = error.message;
+    }
+    err.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.innerText = "Login to Timesheet";
+}
+
+function revealApp() {
+    document.getElementById('login-overlay').style.opacity = '0';
+    setTimeout(() => {
+      document.getElementById('login-overlay').style.visibility = 'hidden';
+      const app = document.getElementById('app-wrapper');
+      app.style.display = 'block';
+      setTimeout(() => { app.style.opacity = '1'; }, 50);
+    }, 400);
+}
+
+async function logout() {
+  if (!confirm('Are you sure you want to logout?')) return;
+  
+  // Save one last time and await it
+  showToast('💾 Saving final state...', 'success');
+  await saveAppState(); 
+  
+  await sb.auth.signOut();
+  
+  // Clear persistent local state identifiers to avoid leaking to next logged-in user
+  localStorage.removeItem('supabase_row_id');
+  localStorage.removeItem('minimed_app_state');
+  
+  const app = document.getElementById('app-wrapper');
+  app.style.opacity = '0';
+  setTimeout(() => {
+    app.style.display = 'none';
+    const login = document.getElementById('login-overlay');
+    login.style.visibility = 'visible';
+    login.style.opacity = '1';
+    // Clear pass
+    document.getElementById('login-pass').value = '';
+    // Clear emails
+    document.getElementById('login-user').value = '';
+  }, 400);
+}
+
+// Press Enter to login
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && document.getElementById('login-overlay').style.visibility !== 'hidden') {
+    checkLogin();
+  }
+});
+
+/* ── CONFIG ───────────────────────────────────────────── */
+const RATE          = 53;           // $/hr – mirrors G18 × $53
+const PR_WH_RATE    = 0.10;         // 10% Hacienda (Independiente)
+const SS_RATE       = 0.124;        // 12.4% Social Security (FICA)
+const MEDICARE_RATE = 0.029;        // 2.9% Medicare
+
+// n8n webhook URL — replace with your actual n8n webhook URL
+const N8N_WEBHOOK   = 'https://n8ncon.servicioxpert.com/webhook/timesheet-send';
+
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const WEEKEND = [5, 6]; // Saturday, Sunday (0-indexed)
+
+/* ── INIT ───────────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', async () => {
+  buildTable();
+  
+  // 1. Check for active Supabase session
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    revealApp();
+    document.getElementById('login-user').value = session.user.email;
+    await fetchFromSupabase(session.user.email);
+  } else if (!loadAppState()) {
+    setDefaults();
+  }
+
+  // 2. Setup auto-save for all inputs
+  document.querySelectorAll('input, select, textarea').forEach(el => {
+    el.addEventListener('change', saveAppState);
+    el.addEventListener('input', saveAppState);
+  });
+});
+
+function setDefaults() {
+  // Default week: next Monday
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0=Sun
+  const monday = new Date(today);
+  const diff = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7;
+  monday.setDate(today.getDate() + (dayOfWeek === 1 ? 0 : diff));
+  // Baseline: March 30, 2026 as Week 1
+  const baseline = '2026-03-30';
+  const savedTs = localStorage.getItem('tsNumber');
+  
+  if (!savedTs) {
+    document.getElementById('ts-number').value = '1';
+    localStorage.setItem('tsNumber', '1');
+  } else {
+    document.getElementById('ts-number').value = savedTs;
+  }
+
+  const savedWeek = localStorage.getItem('minimed_app_state') ? 
+    JSON.parse(localStorage.getItem('minimed_app_state')).weekStart : baseline;
+
+  document.getElementById('week-start').value = savedWeek;
+  onWeekChange();
+
+  // Set today's signature date
+  const todayIso = today.toISOString().split('T')[0];
+  document.getElementById('prof-date').value = todayIso;
+  document.getElementById('sup-date').value  = todayIso;
+}
+
+function updateEnumaration() {
+  const num = document.getElementById('ts-number').value;
+  localStorage.setItem('tsNumber', num);
+  onWeekChange();
+}
+
+/* ── BUILD TABLE ───────────────────────────────────────────── */
+function generateTimeOptions(activeVal = '', minVal = '') {
+  let opts = '<option value="">--</option>';
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const hh = h.toString().padStart(2, '0');
+      const mm = m.toString().padStart(2, '0');
+      const val = `${hh}:${mm}`;
+      
+      if (minVal && val <= minVal) continue;
+
+      const isPm = h >= 12;
+      let dispH = h % 12;
+      if (dispH === 0) dispH = 12;
+      const ampm = isPm ? 'PM' : 'AM';
+      const dispVal = `${dispH.toString().padStart(2, '0')}:${mm} ${ampm}`;
+
+      const sel = val === activeVal ? ' selected' : '';
+      opts += `<option value="${val}"${sel}>${dispVal}</option>`;
+    }
+  }
+  return opts;
+}
+
+function buildTable() {
+  const tbody = document.getElementById('ts-body');
+  tbody.innerHTML = '';
+  DAYS.forEach((day, i) => {
+    const isWeekend = WEEKEND.includes(i);
+    const row = document.createElement('tr');
+    row.id = `row-${i}`;
+    row.innerHTML = `
+      <td>
+        <div class="day-label">
+          <div class="dot ${isWeekend ? 'weekend' : ''}"></div>
+          <span id="day-name-${i}">${day}</span>
+        </div>
+      </td>
+      <td class="hours-cell zero" id="hrs-${i}">0.00</td>
+      <td><input type="date" id="date-${i}" onchange="syncDates(${i})" /></td>
+      <td><select id="start-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '08:00')}</select></td>
+      <td><select id="lout-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '12:00', isWeekend ? '' : '08:00')}</select></td>
+      <td><select id="lin-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '13:00', isWeekend ? '' : '12:00')}</select></td>
+      <td><select id="end-${i}" onchange="calcRow(${i})">${generateTimeOptions(isWeekend ? '' : '17:00', isWeekend ? '' : '13:00')}</select></td>
+      <td><textarea id="desc-${i}" rows="2" placeholder="Work performed…" oninput="saveAppState()"></textarea></td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  // Populate default descriptions for weekdays
+  const defaultDescs = [
+    'Validation protocol testing & IQ/OQ documentation review',
+    'Equipment calibration verification and SOP update',
+    'Change control review and deviations report',
+    'Audit preparation – gap analysis documentation',
+    'QA final inspection & weekly report submittal',
+    '',
+    ''
+  ];
+  defaultDescs.forEach((d, i) => {
+    document.getElementById(`desc-${i}`).value = d;
+  });
+
+  // After building the table, trigger calculation for all rows 
+  // to ensure default times (like 08:00 - 17:00) are computed.
+  for (let i = 0; i < 7; i++) {
+    calcRow(i);
+  }
+}
+
+/* ── WEEK DATE SYNC ───────────────────────────────────────────── */
+document.getElementById('week-start').addEventListener('change', onWeekChange);
+
+function onWeekChange() {
+  const val = document.getElementById('week-start').value;
+  if (!val) return;
+  const picked = new Date(val + 'T00:00:00');
+  
+  // Ensure the date is always set to Monday of that week
+  const monday = new Date(picked);
+  const dayOfWeek = picked.getDay();
+  // If it's Sunday (0), Monday is -6 days. Otherwise Monday is 1 - dayOfWeek
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  monday.setDate(picked.getDate() + diff);
+  
+  // Snap the top input to the correct Monday date
+  document.getElementById('week-start').value = monday.toISOString().split('T')[0];
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const startFmt = monday.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  const endFmt = sunday.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  
+  const tsVal = document.getElementById('ts-number').value;
+  const tsStr = tsVal ? ` No. ${tsVal}` : '';
+  document.getElementById('page-title').innerHTML = `Weekly <span>Timesheet${tsStr}</span>: ${startFmt} - ${endFmt}`;
+
+  DAYS.forEach((dayLabel, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    document.getElementById(`date-${i}`).value = d.toISOString().split('T')[0];
+    // Maintain strict Monday-Sunday layout
+    document.getElementById(`day-name-${i}`).textContent = dayLabel;
+  });
+  calcAll();
+}
+
+/* ── ROLLOVER PREVIEW ───────────────────────────────────────── */
+function showRolloverPreview() {
+  const fmt = (n) => `$${Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  
+  // Current week info
+  const weekVal = document.getElementById('week-start').value;
+  const tsNum = parseInt(document.getElementById('ts-number').value, 10) || 0;
+  
+  // Current YTD
+  const prevYtdGross = parseFloat(document.getElementById('prev-ytd-gross').value) || 0;
+  const prevYtdNet = parseFloat(document.getElementById('prev-ytd-net').value) || 0;
+  
+  // New YTD (after this week's work)
+  const newGrossStr = document.getElementById('ytd-new-gross').textContent.replace(/[^0-9.-]/g, '');
+  const newNetStr = document.getElementById('ytd-new-net').textContent.replace(/[^0-9.-]/g, '');
+  const newYtdGross = parseFloat(newGrossStr) || 0;
+  const newYtdNet = parseFloat(newNetStr) || 0;
+  
+  // Week dates
+  if (weekVal) {
+    const currMonday = new Date(weekVal + 'T00:00:00');
+    const nextMonday = new Date(currMonday);
+    nextMonday.setDate(currMonday.getDate() + 7);
+    const currSunday = new Date(currMonday); currSunday.setDate(currMonday.getDate() + 6);
+    const nextSunday = new Date(nextMonday); nextSunday.setDate(nextMonday.getDate() + 6);
+    const dfmt = (d) => d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    document.getElementById('rv-week-from').textContent = `${dfmt(currMonday)} – ${dfmt(currSunday)}`;
+    document.getElementById('rv-week-to').textContent = `${dfmt(nextMonday)} – ${dfmt(nextSunday)}`;
+  }
+  
+  // Populate preview
+  document.getElementById('rv-ts-from').textContent = `#${tsNum}`;
+  document.getElementById('rv-ts-to').textContent = `#${tsNum + 1}`;
+  document.getElementById('rv-ytd-gross-from').textContent = fmt(prevYtdGross);
+  document.getElementById('rv-ytd-gross-to').textContent = fmt(newYtdGross);
+  document.getElementById('rv-ytd-net-from').textContent = fmt(prevYtdNet);
+  document.getElementById('rv-ytd-net-to').textContent = fmt(newYtdNet);
+  
+  // Show modal
+  document.getElementById('rollover-modal').classList.add('active');
+}
+
+function closeRolloverPreview() {
+  document.getElementById('rollover-modal').classList.remove('active');
+}
+
+function confirmRollover() {
+  closeRolloverPreview();
+  executeRollover();
+}
+
+function executeRollover() {
+  // 1. Roll over YTD
+  const newGrossStr = document.getElementById('ytd-new-gross').textContent.replace(/[^0-9.-]/g, '');
+  const newNetStr   = document.getElementById('ytd-new-net').textContent.replace(/[^0-9.-]/g, '');
+  
+  document.getElementById('prev-ytd-gross').value = parseFloat(newGrossStr) || 0;
+  document.getElementById('prev-ytd-net').value   = parseFloat(newNetStr) || 0;
+
+  // 2. Reset time entries & signatures
+  for (let i = 0; i < 7; i++) {
+    document.getElementById(`start-${i}`).value = '';
+    document.getElementById(`lout-${i}`).value  = '';
+    document.getElementById(`lin-${i}`).value   = '';
+    document.getElementById(`end-${i}`).value   = '';
+    calcRow(i);
+  }
+  document.getElementById('comments').value = '';
+  document.getElementById('prof-sig').value = '';
+  document.getElementById('sup-sig').value  = '';
+
+  // 3. Advance Timesheet Number
+  const tsEl = document.getElementById('ts-number');
+  const n = parseInt(tsEl.value, 10) || 0;
+  tsEl.value = n + 1;
+  localStorage.setItem('tsNumber', tsEl.value);
+
+  // 4. Advance week date by 7 days
+  const val = document.getElementById('week-start').value;
+  if (val) {
+    const monday = new Date(val + 'T00:00:00');
+    monday.setDate(monday.getDate() + 7);
+    document.getElementById('week-start').value = monday.toISOString().split('T')[0];
+    onWeekChange();
+  }
+
+  saveAppState();
+  
+  // Clear Supabase Row ID to create a new record for the new week
+  localStorage.removeItem('supabase_row_id');
+
+  showToast('✅ Rolled over to next week successfully!', 'success');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Keep legacy function for backwards compat
+function startNextWeek() { showRolloverPreview(); }
+
+function syncDates(idx) {
+  // If user changes Monday's date in the table directly, update the week-start and re-cascade
+  if (idx === 0) {
+    document.getElementById('week-start').value = document.getElementById('date-0').value;
+    onWeekChange();
+  } else {
+    // Other days shouldn't change the whole week, or we could prevent it? Just recalc row for now
+    calcRow(idx);
+  }
+}
+
+/* ── CALCULATE HOURS ───────────────────────────────────────────── */
+function timeToMin(timeStr) {
+  if (!timeStr) return null;
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function calcRow(i) {
+  const startEl = document.getElementById(`start-${i}`);
+  const loutEl  = document.getElementById(`lout-${i}`);
+  const linEl   = document.getElementById(`lin-${i}`);
+  const endEl   = document.getElementById(`end-${i}`);
+  
+  // Re-generate inner options based strictly on chronological bounds
+  const valStart = startEl.value;
+  loutEl.innerHTML = generateTimeOptions(loutEl.value, valStart);
+  
+  const minLin = loutEl.value || valStart || '';
+  linEl.innerHTML = generateTimeOptions(linEl.value, minLin);
+  
+  const minEnd = linEl.value || loutEl.value || valStart || '';
+  endEl.innerHTML = generateTimeOptions(endEl.value, minEnd);
+
+  const start = timeToMin(startEl.value);
+  const lout  = timeToMin(loutEl.value);
+  const lin   = timeToMin(linEl.value);
+  const end   = timeToMin(endEl.value);
+  const cell  = document.getElementById(`hrs-${i}`);
+
+  let hours = 0;
+  let isValid = true;
+  
+  let amHours = 0;
+  let pmHours = 0;
+
+  // Scenario 1: Morning segment (Start to Lunch Out)
+  if (start !== null && lout !== null && lout > start) {
+    amHours = (lout - start);
+  } 
+  // Scenario 2: Afternoon segment (Lunch In to End)
+  if (lin !== null && end !== null && end > lin) {
+    pmHours = (end - lin);
+  }
+  
+  // Scenario 3: Continuous day (Start to End without Lunch break recorded)
+  if (start !== null && end !== null && end > start && (lout === null || lin === null)) {
+    // If lunch is not fully specified, calculate continuous time
+    hours = (end - start) / 60;
+  } else {
+    // Sum up the segments
+    hours = (amHours + pmHours) / 60;
+  }
+
+  if (hours < 0) hours = 0;
+  
+  cell.textContent = hours.toFixed(2);
+  cell.className = `hours-cell${hours === 0 ? ' zero' : ''}`;
+  calcAll();
+}
+
+function calcAll() {
+  let total = 0;
+  DAYS.forEach((_, i) => {
+    const v = parseFloat(document.getElementById(`hrs-${i}`).textContent) || 0;
+    total += v;
+  });
+
+  const gross     = total * RATE;
+  
+  // YTD Logic & Exemption
+  const prevYtdGross = parseFloat(document.getElementById('prev-ytd-gross').value) || 0;
+  const prevYtdNet   = parseFloat(document.getElementById('prev-ytd-net').value) || 0;
+  const newYtdGross  = prevYtdGross + gross;
+  
+  // First $500 exempt from PR Hacienda Withholding (10%)
+  const prSubject = Math.max(0, newYtdGross - Math.max(500, prevYtdGross));
+  const prWh      = prSubject * PR_WH_RATE;
+  
+  const ss        = gross * SS_RATE;
+  const medicare  = gross * MEDICARE_RATE;
+  const totalRet  = prWh + ss + medicare;
+  const net       = gross - totalRet;
+  
+  const newYtdNet = prevYtdNet + net;
+  const effRate   = gross > 0 ? (totalRet / gross * 100) : 0;
+
+  const fmt = (n, minus) => `${minus ? '-' : ''}$${Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+  // Banner
+  document.getElementById('banner-hours').innerHTML = `${total.toFixed(2)} <span>hrs</span>`;
+  document.getElementById('banner-gross').textContent = fmt(gross);
+  document.getElementById('total-hours-cell').textContent = total.toFixed(2);
+
+  // Cards
+  document.getElementById('sum-gross').textContent    = fmt(gross);
+  document.getElementById('sum-pr-wh').textContent    = fmt(prWh, true);
+  document.getElementById('sum-ss').textContent       = fmt(ss, true);
+  document.getElementById('sum-medicare').textContent = fmt(medicare, true);
+  document.getElementById('sum-net').textContent      = fmt(net);
+  document.getElementById('sum-total-ret').textContent= fmt(totalRet, true);
+
+  // Breakdown table
+  document.getElementById('wh-gross').textContent = fmt(gross);
+  document.getElementById('wh-pr').textContent    = fmt(prWh, true);
+  document.getElementById('wh-ss').textContent    = fmt(ss, true);
+  document.getElementById('wh-med').textContent   = fmt(medicare, true);
+  document.getElementById('wh-net').textContent   = fmt(net);
+  document.getElementById('wh-eff').textContent   = effRate.toFixed(2) + '%';
+
+  // YTD Card
+  document.getElementById('ytd-curr-gross').textContent = fmt(gross);
+  document.getElementById('ytd-new-gross').textContent  = fmt(newYtdGross);
+  document.getElementById('ytd-curr-net').textContent   = fmt(net);
+  document.getElementById('ytd-new-net').textContent    = fmt(newYtdNet);
+  
+  // Explicitly save the new calculated state
+  saveAppState();
+}
+
+/* ── LOCAL STORAGE PERSISTENCE ──────────────────────────────── */
+let syncDebounceTimer = null;
+async function saveAppState() {
+  updateSyncStatus('pending');
+  const data = {
+    profName      : document.getElementById('prof-name').value,
+    profEmail     : document.getElementById('login-user')?.value || '',
+    company       : document.getElementById('company').value,
+    title         : document.getElementById('title').value,
+    weekStart     : document.getElementById('week-start').value,
+    supervisor    : document.getElementById('supervisor').value,
+    projCode      : document.getElementById('proj-code').value,
+    tsNumber      : document.getElementById('ts-number').value,
+    prevYtdGross  : document.getElementById('prev-ytd-gross').value,
+    prevYtdNet    : document.getElementById('prev-ytd-net').value,
+    comments      : document.getElementById('comments').value,
+    profSig       : document.getElementById('prof-sig').value,
+    profDate      : document.getElementById('prof-date').value,
+    supSig        : document.getElementById('sup-sig').value,
+    supDate       : document.getElementById('sup-date').value,
+    sendTo        : document.getElementById('send-to').value,
+    sendCc        : document.getElementById('send-cc').value,
+    days: []
+  };
+  
+  for (let i = 0; i < 7; i++) {
+    data.days.push({
+      start : document.getElementById(`start-${i}`).value,
+      lout  : document.getElementById(`lout-${i}`).value,
+      lin   : document.getElementById(`lin-${i}`).value,
+      end   : document.getElementById(`end-${i}`).value,
+      desc  : document.getElementById(`desc-${i}`).value
+    });
+  }
+  
+  localStorage.setItem('minimed_app_state', JSON.stringify(data));
+
+  // Debounced Cloud Sync (wait 1s of inactivity before pushing to supabase)
+  if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+  syncDebounceTimer = setTimeout(async () => {
+    await syncToSupabase(data);
+  }, 1000);
+}
+
+
+/* ── SYNC STATUS HELPER ────────────────────────────────────────── */
+function updateSyncStatus(status) {
+  const el = document.getElementById('sync-status');
+  const txt = document.getElementById('sync-text');
+  if (!el || !txt) return;
+  el.className = status;
+  if      (status === 'syncing') txt.innerText = 'Syncing...';
+  else if (status === 'saved')   txt.innerText = 'Cloud Saved';
+  else if (status === 'pending') txt.innerText = 'Pending Sync';
+  else if (status === 'error')   txt.innerText = 'Sync Failed';
+}
+
+let isSyncing = false;
+async function syncToSupabase(payloadData) {
+  if (isSyncing) return;
+  isSyncing = true;
+  updateSyncStatus('syncing');
+
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    const userEmail = user ? user.email : (payloadData.profEmail || payloadData.profName);
+    if (!userEmail) { updateSyncStatus('error'); return; }
+
+    const record = { 
+      payload: payloadData,
+      professional_email: userEmail,
+      updated_at: new Date().toISOString()
+    };
+
+    // Note: To successfully upsert, the table needs a unique index on (professional_email, payload->>weekStart)
+    // We try to find the row manually to avoid indexing requirement.
+    const { data: existing, error: selErr } = await sb
+      .from('timesheets')
+      .select('id')
+      .eq('professional_email', userEmail)
+      .eq('payload->>weekStart', payloadData.weekStart)
+      .limit(1);
+
+    if (selErr) throw selErr;
+
+    let resError;
+    if (existing && existing.length > 0) {
+      const { error } = await sb.from('timesheets').update(record).eq('id', existing[0].id);
+      resError = error;
+    } else {
+      const { error } = await sb.from('timesheets').insert([record]);
+      resError = error;
+    }
+
+    if (resError) throw resError;
+    updateSyncStatus('saved');
+  } catch (e) {
+    console.error("Database Sync Error:", e);
+    updateSyncStatus('error');
+    if (e.message && e.message.includes("policy")) {
+      console.warn("MANDATORY: You must run the SQL policy from your Dashboard to enable anonymous saving!");
+    }
+  } finally {
+    isSyncing = false;
+  }
+}
+
+async function fetchFromSupabase(email) {
+  const currentWeek = document.getElementById('week-start').value;
+  try {
+    updateSyncStatus('syncing');
+    const { data, error } = await sb
+      .from('timesheets')
+      .select('*')
+      .eq('professional_email', email)
+      .eq('payload->>weekStart', currentWeek)
+      .limit(1);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      const dbRow = data[0];
+      localStorage.setItem('supabase_row_id', dbRow.id);
+      localStorage.setItem('minimed_app_state', JSON.stringify(dbRow.payload));
+      
+      loadAppState();
+      showToast('☁️ Timesheet restored for this week');
+      updateSyncStatus('saved');
+      return true;
+    }
+    updateSyncStatus('saved');
+  } catch (e) {
+    console.error("Cloud fetch failed:", e);
+    updateSyncStatus('error');
+  }
+  return false;
+}
+
+function loadAppState() {
+    const saved = localStorage.getItem('minimed_app_state');
+    if (!saved) return false;
+    
+    try {
+        const data = JSON.parse(saved);
+        if (data.profName)    document.getElementById('prof-name').value = data.profName;
+        if (data.company)     document.getElementById('company').value = data.company;
+        if (data.title)       document.getElementById('title').value = data.title;
+        if (data.weekStart)   document.getElementById('week-start').value = data.weekStart;
+        if (data.supervisor)  document.getElementById('supervisor').value = data.supervisor;
+        if (data.projCode)    document.getElementById('proj-code').value = data.projCode;
+        if (data.tsNumber)    document.getElementById('ts-number').value = data.tsNumber;
+        if (data.prevYtdGross)document.getElementById('prev-ytd-gross').value = data.prevYtdGross;
+        if (data.prevYtdNet)  document.getElementById('prev-ytd-net').value = data.prevYtdNet;
+        if (data.comments)    document.getElementById('comments').value = data.comments;
+        if (data.profSig)     document.getElementById('prof-sig').value = data.profSig;
+        if (data.profDate)    document.getElementById('prof-date').value = data.profDate;
+        if (data.supSig)      document.getElementById('sup-sig').value = data.supSig;
+        if (data.supDate)     document.getElementById('sup-date').value = data.supDate;
+        if (data.sendTo)      document.getElementById('send-to').value = data.sendTo;
+        if (data.sendCc)      document.getElementById('send-cc').value = data.sendCc;
+        
+        if (data.days && Array.isArray(data.days)) {
+            data.days.forEach((d, i) => {
+                const rowId = i;
+                if (document.getElementById(`start-${rowId}`)) {
+                    document.getElementById(`start-${rowId}`).value = d.start;
+                    document.getElementById(`lout-${rowId}`).value  = d.lout;
+                    document.getElementById(`lin-${rowId}`).value   = d.lin;
+                    document.getElementById(`end-${rowId}`).value   = d.end;
+                    document.getElementById(`desc-${rowId}`).value  = d.desc;
+                    calcRow(rowId);
+                }
+            });
+        }
+        
+        calcAll();
+        onWeekChange(); 
+        return true;
+    } catch (e) {
+        console.error("Error loading app state:", e);
+        return false;
+    }
+}
+
+/* ── COLLECT FORM DATA ───────────────────────────────────────────── */
+function collectData() {
+  const days = DAYS.map((day, i) => ({
+    day,
+    date    : document.getElementById(`date-${i}`).value,
+    start   : document.getElementById(`start-${i}`).value,
+    lunchOut: document.getElementById(`lout-${i}`).value,
+    lunchIn : document.getElementById(`lin-${i}`).value,
+    end     : document.getElementById(`end-${i}`).value,
+    hours   : parseFloat(document.getElementById(`hrs-${i}`).textContent) || 0,
+    desc    : document.getElementById(`desc-${i}`).value
+  }));
+
+  const totalHours  = days.reduce((a, d) => a + d.hours, 0);
+  const gross       = totalHours * RATE;
+  
+  const prevYtdGross= parseFloat(document.getElementById('prev-ytd-gross').value) || 0;
+  const prevYtdNet  = parseFloat(document.getElementById('prev-ytd-net').value) || 0;
+  const newYtdGross = prevYtdGross + gross;
+  const prSubject   = Math.max(0, newYtdGross - Math.max(500, prevYtdGross));
+  const prWh        = prSubject * PR_WH_RATE;
+  
+  const ss          = gross * SS_RATE;
+  const medicare    = gross * MEDICARE_RATE;
+  const totalRet    = prWh + ss + medicare;
+  const net         = gross - totalRet;
+  const newYtdNet   = prevYtdNet + net;
+
+  const fmt = (n) => `$${n.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+  return {
+    // Header
+    professionalName : document.getElementById('prof-name').value,
+    company          : document.getElementById('company').value,
+    title            : document.getElementById('title').value,
+    weekStart        : document.getElementById('week-start').value,
+    supervisor       : document.getElementById('supervisor').value,
+    projectCode      : document.getElementById('proj-code').value,
+    comments         : document.getElementById('comments').value,
+    profSignature    : document.getElementById('prof-sig').value,
+    profSignDate     : document.getElementById('prof-date').value,
+    supSignature     : document.getElementById('sup-sig').value,
+    supSignDate      : document.getElementById('sup-date').value,
+
+    // Days
+    days,
+
+    // Financial
+    rate             : RATE,
+    totalHours       : totalHours.toFixed(2),
+    grossPay         : fmt(gross),
+    grossPayRaw      : gross,
+    prWithholding    : fmt(prWh),
+    prWithholdingRaw : prWh,
+    socialSecurity   : fmt(ss),
+    socialSecurityRaw: ss,
+    medicare         : fmt(medicare),
+    medicareRaw      : medicare,
+    totalRetentions  : fmt(totalRet),
+    totalRetentionsRaw: totalRet,
+    netPay           : fmt(net),
+    netPayRaw        : net,
+    effectiveRate    : ((totalRet / gross) * 100).toFixed(2) + '%',
+    prevYtdGross     : fmt(prevYtdGross),
+    newYtdGross      : fmt(newYtdGross),
+    prevYtdNet       : fmt(prevYtdNet),
+    newYtdNet        : fmt(newYtdNet),
+
+    // Email
+    recipientEmail   : document.getElementById('send-to').value,
+    ccEmail          : document.getElementById('send-cc').value,
+
+    // Meta
+    generatedAt      : new Date().toISOString(),
+    tsNumber         : document.getElementById('ts-number').value,
+    // Full HTML email body embedded
+    emailHtml        : buildEmailHtml({ tsNumber: document.getElementById('ts-number').value, professionalName: document.getElementById('prof-name').value, company: document.getElementById('company').value, title: document.getElementById('title').value, weekStart: document.getElementById('week-start').value, supervisor: document.getElementById('supervisor').value, projectCode: document.getElementById('proj-code').value, days, totalHours: totalHours.toFixed(2), grossPay: fmt(gross), prWithholding: fmt(prWh), socialSecurity: fmt(ss), medicare: fmt(medicare), totalRetentions: fmt(totalRet), netPay: fmt(net), prevYtdGross: fmt(prevYtdGross), newYtdGross: fmt(newYtdGross), prevYtdNet: fmt(prevYtdNet), newYtdNet: fmt(newYtdNet), effectiveRate: ((totalRet/gross)*100||0).toFixed(2)+'%', comments: document.getElementById('comments').value, profSignature: document.getElementById('prof-sig').value, profSignDate: document.getElementById('prof-date').value, supSignature: document.getElementById('sup-sig').value, supSignDate: document.getElementById('sup-date').value })
+  };
+}
+
+/* ── BUILD EMAIL HTML ───────────────────────────────────────────── */
+function buildEmailHtml(d) {
+  const rows = d.days.map(r => `
+    <tr style="border-bottom:1px solid #2e3350;">
+      <td style="padding:8px 10px;font-weight:600;color:#e8eaf2;">${r.day}</td>
+      <td style="padding:8px 10px;font-weight:700;color:${r.hours > 0 ? '#22c55e' : '#8891b4'};">${r.hours.toFixed(2)}</td>
+      <td style="padding:8px 10px;color:#8891b4;">${r.date || '—'}</td>
+      <td style="padding:8px 10px;color:#8891b4;">${r.start || '—'}</td>
+      <td style="padding:8px 10px;color:#8891b4;">${r.lunchOut || '—'}</td>
+      <td style="padding:8px 10px;color:#8891b4;">${r.lunchIn || '—'}</td>
+      <td style="padding:8px 10px;color:#8891b4;">${r.end || '—'}</td>
+      <td style="padding:8px 10px;color:#8891b4;font-size:12px;">${r.desc || ''}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:20px;background-color:#0f1117;color:#e8eaf2;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<div style="max-width:800px;margin:0 auto;">
+  <!-- Header -->
+  <table width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(135deg,#1e2a6e,#12173b);border-radius:12px;margin-bottom:20px;">
+    <tr>
+      <td style="padding:32px;">
+        <div style="font-size:28px;font-weight:800;color:#ffffff;margin-bottom:4px;">Weekly Timesheet No. ${d.tsNumber || '1'}</div>
+        <div style="color:#8891b4;font-size:14px;">MiniMed Personal · Professional Services · Puerto Rico</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Info Grid -->
+  <table width="100%" cellspacing="10" cellpadding="0" style="margin:0 -10px 10px -10px;">
+    <tr>
+      <td width="33%" style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:16px;">
+        <div style="color:#8891b4;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Professional</div>
+        <div style="color:#e8eaf2;font-weight:700;font-size:14px;">${d.professionalName || '—'}</div>
+      </td>
+      <td width="33%" style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:16px;">
+        <div style="color:#8891b4;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Company</div>
+        <div style="color:#e8eaf2;font-weight:700;font-size:14px;">${d.company || '—'}</div>
+      </td>
+      <td width="33%" style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:16px;">
+        <div style="color:#8891b4;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Title</div>
+        <div style="color:#e8eaf2;font-weight:700;font-size:14px;">${d.title || '—'}</div>
+      </td>
+    </tr>
+    <tr>
+      <td width="33%" style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:16px;">
+        <div style="color:#8891b4;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Week Starting</div>
+        <div style="color:#e8eaf2;font-weight:700;font-size:14px;">${d.weekStart || '—'}</div>
+      </td>
+      <td width="33%" style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:16px;">
+        <div style="color:#8891b4;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Supervisor</div>
+        <div style="color:#e8eaf2;font-weight:700;font-size:14px;">${d.supervisor || '—'}</div>
+      </td>
+      <td width="33%" style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:16px;">
+        <div style="color:#8891b4;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Project Code</div>
+        <div style="color:#e8eaf2;font-weight:700;font-size:14px;">${d.projectCode || '—'}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Time Table -->
+  <div style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;overflow:hidden;margin-bottom:20px;">
+    <div style="background:#20243a;padding:12px 20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#8891b4;">Daily Time Entries</div>
+    <table width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;border-collapse:collapse;">
+      <thead>
+        <tr style="background:#20243a;">
+          <th style="padding:10px 20px;color:#8891b4;text-align:left;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Day</th>
+          <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Hours</th>
+          <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Date</th>
+          <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Start</th>
+          <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Lch Out</th>
+          <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">Lch In</th>
+          <th style="padding:10px;color:#8891b4;font-size:10px;text-transform:uppercase;border-bottom:1px solid #2e3350;">End</th>
+          <th style="padding:10px 20px;color:#8891b4;font-size:10px;text-transform:uppercase;text-align:left;border-bottom:1px solid #2e3350;">Description</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr style="background:#1e2540;">
+          <td style="padding:16px 20px;text-align:right;color:#8891b4;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">TOTAL WEEKLY HOURS</td>
+          <td style="padding:16px 10px;text-align:center;font-size:18px;font-weight:800;color:#22c55e;">${d.totalHours}</td>
+          <td colspan="6"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- Summary Grid -->
+  <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:20px;">
+    <tr>
+      <td width="55%" valign="top" style="padding-right:10px;">
+        <div style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:24px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8891b4;margin-bottom:20px;">💰 Pay & Withholding Summary</div>
+          <table width="100%" cellspacing="0" cellpadding="0">
+            <tr><td style="padding:10px 0;color:#e8eaf2;font-size:14px;">Gross Pay</td><td style="text-align:right;font-weight:700;color:#22c55e;font-size:14px;">${d.grossPay}</td></tr>
+            <tr><td style="padding:10px 0;color:#e8eaf2;font-size:14px;">PR Hacienda (10%)</td><td style="text-align:right;font-weight:700;color:#ef4444;font-size:14px;">-${d.prWithholding}</td></tr>
+            <tr><td style="padding:10px 0;color:#e8eaf2;font-size:14px;">Social Security (12.4%)</td><td style="text-align:right;font-weight:700;color:#f59e0b;font-size:14px;">-${d.socialSecurity}</td></tr>
+            <tr><td style="padding:10px 0;color:#e8eaf2;font-size:14px;">Medicare (2.9%)</td><td style="text-align:right;font-weight:700;color:#f59e0b;font-size:14px;">-${d.medicare}</td></tr>
+            <tr style="border-top:2px solid #2e3350;"><td style="padding:20px 0 0;color:#ffffff;font-size:16px;font-weight:700;">Net Pay</td><td style="text-align:right;font-size:24px;font-weight:800;color:#22c55e;padding-top:20px;">${d.netPay}</td></tr>
+          </table>
+        </div>
+      </td>
+      <td width="45%" valign="top" style="padding-left:10px;">
+        <div style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:24px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8891b4;margin-bottom:20px;">📈 YTD Accumulation</div>
+          <table width="100%" cellspacing="0" cellpadding="0">
+            <tr><td style="padding:6px 0;color:#8891b4;font-size:13px;">New YTD Gross</td><td style="text-align:right;color:#818cf8;font-size:14px;font-weight:700;">${d.newYtdGross}</td></tr>
+            <tr><td style="padding:6px 0;color:#8891b4;font-size:13px;">New YTD Net</td><td style="text-align:right;color:#818cf8;font-size:14px;font-weight:700;">${d.newYtdNet}</td></tr>
+            <tr><td style="padding:15px 0 5px;color:#8891b4;font-size:11px;">Total Retention</td><td style="text-align:right;color:#ef4444;font-size:11px;padding-top:15px;">-${d.totalRetentions}</td></tr>
+            <tr><td style="padding:5px 0;color:#8891b4;font-size:11px;">Effective Rate</td><td style="text-align:right;color:#8891b4;font-size:11px;">${d.effectiveRate}</td></tr>
+          </table>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  ${d.comments ? `
+  <div style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:20px;margin-bottom:20px;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8891b4;margin-bottom:10px;">Comments</div>
+    <div style="color:#e8eaf2;font-size:13px;line-height:1.6;">${d.comments}</div>
+  </div>` : ''}
+
+  <!-- Signatures Grid -->
+  <table width="100%" cellspacing="0" cellpadding="0" style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;margin-bottom:20px;">
+    <tr>
+      <td width="50%" style="padding:24px;border-right:1px solid #2e3350;">
+        <div style="color:#8891b4;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Professional Signature</div>
+        <div style="color:#e8eaf2;font-weight:700;font-size:16px;">${d.profSignature || d.professionalName || '—'}</div>
+        <div style="color:#8891b4;font-size:12px;margin-top:4px;">Date: ${d.profSignDate || '—'}</div>
+      </td>
+      <td width="50%" style="padding:24px;">
+        <div style="color:#8891b4;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Supervisor Signature</div>
+        <div style="color:#e8eaf2;font-weight:700;font-size:16px;">${d.supSignature || d.supervisor || '—'}</div>
+        <div style="color:#8891b4;font-size:12px;margin-top:4px;">Date: ${d.supSignDate || '—'}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Footer -->
+  <div style="text-align:center;color:#8891b4;font-size:11px;padding:20px 0;line-height:1.8;">
+    <strong>MiniMed Personal Timesheet System</strong><br/>
+    Puerto Rico · Independiente PR Law 10% Withholding<br/>
+    Email Generated At: ${new Date().toLocaleString('en-US', {timeZone:'America/Puerto_Rico'})} AST
+  </div>
+</div>
+</body></html>`;
+}
+
+/* ── SEND VIA n8n ───────────────────────────────────────────── */
+async function sendTimesheet() {
+  // Validate required fields
+  const required = [
+    { id: 'prof-name',    label: 'Professional Name' },
+    { id: 'company',      label: 'Company' },
+    { id: 'week-start',   label: 'Week Start Date' },
+    { id: 'send-to',      label: 'Recipient Email' },
+  ];
+  let valid = true;
+  required.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (!el.value.trim()) {
+      el.classList.add('invalid');
+      el.addEventListener('input', () => el.classList.remove('invalid'), { once: true });
+      valid = false;
+    }
+  });
+  if (!valid) { showToast('⚠️ Please fill in all required fields', 'error'); return; }
+
+  const btn = document.getElementById('btn-send');
+  btn.disabled = true;
+  btn.classList.add('loading');
+
+  const payload = collectData();
+
+  try {
+    const res = await fetch(N8N_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      showToast('✅ Timesheet sent to ' + payload.recipientEmail, 'success');
+    } else {
+      const text = await res.text();
+      throw new Error(`Server responded ${res.status}: ${text}`);
+    }
+  } catch (err) {
+    console.error('Send error:', err);
+    // Fallback: open mailto with summary
+    showToast('⚠️ n8n webhook unreachable — opening email fallback…', 'error');
+    setTimeout(() => openMailtoFallback(payload), 1500);
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  }
+}
+
+function openMailtoFallback(d) {
+  const subject = encodeURIComponent(`[Timesheet] ${d.professionalName} – Week of ${d.weekStart}`);
+  const body = encodeURIComponent(
+    `Weekly Timesheet Summary\n` +
+    `========================\n` +
+    `Professional: ${d.professionalName}\n` +
+    `Company:      ${d.company}\n` +
+    `Title:        ${d.title}\n` +
+    `Week Of:      ${d.weekStart}\n` +
+    `Supervisor:   ${d.supervisor}\n\n` +
+    `--- HOURS ---\n` +
+    d.days.map(r => `${r.day}: ${r.hours.toFixed(2)} hrs – ${r.desc}`).join('\n') +
+    `\n\nTOTAL HOURS: ${d.totalHours} hrs\n\n` +
+    `--- PAY SUMMARY (PR Law) ---\n` +
+    `Gross Pay:            ${d.grossPay}  (${d.totalHours} hrs × $${d.rate})\n` +
+    `PR Withholding (10%): -${d.prWithholding}\n` +
+    `Social Security (12.4%): -${d.socialSecurity}\n` +
+    `Medicare (2.9%):      -${d.medicare}\n` +
+    `Total Retentions:     -${d.totalRetentions}\n` +
+    `NET PAY:              ${d.netPay}\n\n` +
+    `--- YTD ACCUMULATION ---\n` +
+    `Previous YTD Gross:   ${d.prevYtdGross}\n` +
+    `New YTD Gross:        ${d.newYtdGross}\n` +
+    `Previous YTD Net:     ${d.prevYtdNet}\n` +
+    `New YTD Net:          ${d.newYtdNet}\n\n` +
+    `Comments: ${d.comments}\n\n` +
+    `Professional: ${d.profSignature} — ${d.profSignDate}\n` +
+    `Supervisor:   ${d.supSignature} — ${d.supSignDate}`
+  );
+  window.location.href = `mailto:${d.recipientEmail}?subject=${subject}&body=${body}`;
+}
+
+/* ── TOAST ───────────────────────────────────────────── */
+let _toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.className = ''; }, 4000);
+}
+
+/* ── PRINT / SAVE PDF ───────────────────────────────── */
+function printTimesheet() {
+  // Convert select elements to visible text spans for printing
+  const selects = document.querySelectorAll('#ts-table select');
+  const printSpans = [];
+  
+  selects.forEach(sel => {
+    const span = document.createElement('span');
+    span.className = 'print-value';
+    // Convert 24h to 12h AM/PM for display
+    const val = sel.value;
+    if (val) {
+      const [h, m] = val.split(':').map(Number);
+      const isPm = h >= 12;
+      let dispH = h % 12; if (dispH === 0) dispH = 12;
+      span.textContent = `${dispH}:${m.toString().padStart(2, '0')} ${isPm ? 'PM' : 'AM'}`;
+    } else {
+      span.textContent = '—';
+    }
+    span.style.display = 'none'; // Hidden on screen
+    sel.parentNode.insertBefore(span, sel.nextSibling);
+    sel.classList.add('print-hide');
+    printSpans.push({ sel, span });
+  });
+  
+  // Trigger print
+  window.print();
+  
+  // Cleanup after print dialog closes
+  setTimeout(() => {
+    printSpans.forEach(({ sel, span }) => {
+      sel.classList.remove('print-hide');
+      span.remove();
+    });
+  }, 1000);
+}
+</script>
+</body>
+</html>
