@@ -16,7 +16,7 @@ export const buildEmailHtml = (d) => {
   <table width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(135deg,#1e2a6e,#12173b);border-radius:12px;margin-bottom:20px;">
     <tr>
       <td style="padding:32px;">
-        <div style="font-size:28px;font-weight:800;color:#ffffff;margin-bottom:4px;">Weekly Timesheet No. ${d.tsNumber || '1'}</div>
+        <div style="font-size:28px;font-weight:800;color:#ffffff;margin-bottom:4px;">Weekly Timesheet No. ${d.weekNumber || '1'}</div>
         <div style="color:#8891b4;font-size:14px;">MiniMed Personal · Professional Services · Puerto Rico</div>
       </td>
     </tr>

@@ -102,7 +102,7 @@ function App() {
       ccEmail: profInfo.ccEmail,
 
       generatedAt: new Date().toISOString(),
-      tsNumber: profInfo.tsNumber || 1
+      weekNumber: weekNumber || 1
     };
     
     payload.emailHtml = buildEmailHtml(payload);
@@ -293,7 +293,6 @@ function App() {
             <InputGroup label="Week Starting (Monday)" type="date" min="2026-03-30" value={profInfo?.weekStart || ''} onChange={(v) => setProfInfo({ ...profInfo, weekStart: v })} />
             <InputGroup label="Supervisor Name" value={profInfo?.supervisor || ''} onChange={(v) => setProfInfo({ ...profInfo, supervisor: v })} />
             <InputGroup label="Project / PO Code" value={profInfo?.projectCode || ''} onChange={(v) => setProfInfo({ ...profInfo, projectCode: v })} />
-            <InputGroup label="Timesheet #" type="number" value={profInfo?.tsNumber || ''} onChange={(v) => setProfInfo({ ...profInfo, tsNumber: v })} />
           </div>
         </section>
 

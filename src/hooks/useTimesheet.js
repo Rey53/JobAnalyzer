@@ -79,7 +79,6 @@ export function useTimesheet() {
     title: 'Sr. Quality Engineer',
     supervisor: 'Charlene González',
     projectCode: 'EQValPR',
-    tsNumber: 1,
     weekStart: getMonday(),
     prevYtdGross: 0,
     prevYtdNet: 0,
