@@ -232,16 +232,20 @@ function App() {
           
           <div className="hero-right">
             <div className="nav-controls badge">
-              {weekNumber > 1 ? (
-                <button className="nav-btn" onClick={rolloverPrevWeek} title="Previous Week">
-                  <ChevronLeft size={16} />
-                </button>
-              ) : <div style={{width: 24}}></div>}
+              <button 
+                className="nav-btn" 
+                onClick={rolloverPrevWeek} 
+                title="Previous Week"
+                disabled={weekNumber <= 1}
+                style={{ opacity: weekNumber <= 1 ? 0.3 : 1, cursor: weekNumber <= 1 ? 'not-allowed' : 'pointer' }}
+              >
+                <ChevronLeft size={16} />
+              </button>
               <div className="week-display">
                 <Calendar size={14} /> Week #{weekNumber}
               </div>
               <button className="nav-btn" onClick={rolloverNewWeek} title="Next Week">
-                <RotateCw size={16} />
+                <ChevronRight size={16} />
               </button>
             </div>
 
