@@ -120,8 +120,12 @@ export function useTimesheet() {
       if (saved) {
         try {
           const data = JSON.parse(saved);
-          if (data.profInfo) initialProf = data.profInfo;
-          if (data.entries) initialEntries = data.entries;
+          if (data.profInfo && (loading || data.profInfo.weekStart === profInfo.weekStart)) {
+            initialProf = data.profInfo;
+          }
+          if (data.entries && (loading || data.profInfo?.weekStart === profInfo.weekStart)) {
+            initialEntries = data.entries;
+          }
         } catch (e) {}
       }
 
@@ -147,7 +151,16 @@ export function useTimesheet() {
       if (initialEntries && Array.isArray(initialEntries) && initialEntries.length === 7) {
         setEntries(initialEntries.map((e, i) => ({ ...e, date: dates[i] })));
       } else {
-        setEntries(prev => prev.map((e, i) => ({ ...e, date: dates[i] })));
+        // Start a fresh, blank timesheet for the new week
+        setEntries(DAYS.map((day, i) => ({
+          day,
+          date: dates[i],
+          start: WEEKEND_INDICES.includes(i) ? '' : '08:00',
+          lunchOut: WEEKEND_INDICES.includes(i) ? '' : '12:00',
+          lunchIn: WEEKEND_INDICES.includes(i) ? '' : '13:00',
+          end: WEEKEND_INDICES.includes(i) ? '' : '17:00',
+          description: ''
+        })));
       }
       if (syncStatus === 'fetching') setSyncStatus('idle');
     }
@@ -180,7 +193,14 @@ export function useTimesheet() {
       weekStart: newWeekStart,
       comments: '',
       profSignature: '',
-      supSignature: ''
+      supSignature: '',
+      // Carry over YTD values to the next week (if they don't exist in Supabase yet)
+      ...(direction === 1 ? {
+        prevYtdGross: totals.newYtdGross,
+        prevYtdNet: totals.newYtdNet,
+        prevYtdPrWh: totals.newYtdPrWh,
+        prevYtdSelfEmp: totals.newYtdSelfEmp
+      } : {})
     }));
   };
 
