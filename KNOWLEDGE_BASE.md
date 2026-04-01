@@ -24,7 +24,7 @@ This application is designed for independent contractors in Puerto Rico who need
 
 ## 5. Frequently Asked Questions (FAQ)
 - **Q:** How do I start a new week?  
-  **A:** Use the "Next Week" button or pick a Monday in the `Week Starting` date picker.
+  **A:** Use the "Next Week" (▶) or "Previous Week" (◀) arrows next to the page title. The system will automatically auto-save your current state, transition to the chosen week, decrement/increment the Timesheet number, and seamlessly carry-over / retrieve your accumulated YTD totals. You can also pick a Monday in the `Week Starting` date picker.
 - **Q:** Why did my screen go blank?  
   **A:** This was a previous stability issue related to date navigation, now resolved with robust state lookups and initialization guards.
 - **Q:** How do I send my timesheet?  
