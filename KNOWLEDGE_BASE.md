@@ -29,3 +29,5 @@ This application is designed for independent contractors in Puerto Rico who need
   **A:** This was a previous stability issue related to date navigation, now resolved with robust state lookups and initialization guards.
 - **Q:** How do I send my timesheet?  
   **A:** Use the "Send via n8n Automation" button at the bottom. Ensure all required fields (Name, Company, Week Start, Recipient Email) are filled.
+- **Q:** How do I hide my payment amounts?  
+  **A:** Click the eye icon (👁/👁‍🗨) in the top header. This will mask all dollar amounts and YTD accumulations with dots (••••••), leaving only your hours visible.

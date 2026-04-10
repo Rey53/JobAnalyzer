@@ -19,7 +19,9 @@ import {
   CreditCard,
   RotateCw,
   ChevronLeft,
-  FileText
+  FileText,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useTimesheet } from './hooks/useTimesheet';
 import { supabase } from './lib/supabase';
@@ -38,6 +40,7 @@ function App() {
     rolloverPrevWeek,
     forceSync
   } = useTimesheet();
+  const [amountsHidden, setAmountsHidden] = useState(false);
 
   const [loggedIn, setLoggedIn] = useState(false);
   const handleLogout = async () => {
@@ -247,6 +250,17 @@ function App() {
               <button className="nav-btn" onClick={rolloverNewWeek} title="Next Week">
                 <ChevronRight size={16} />
               </button>
+              
+              <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }}></div>
+              
+              <button 
+                className="nav-btn" 
+                onClick={() => setAmountsHidden(!amountsHidden)}
+                title={amountsHidden ? "Show Amounts" : "Hide Amounts"}
+                style={{ color: amountsHidden ? 'var(--accent)' : '#fff' }}
+              >
+                {amountsHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+              </button>
             </div>
 
             <div className="badge pr-badge">
@@ -311,7 +325,7 @@ function App() {
           <div className="total-item align-right">
             <div className="label">Gross Pay (Calculated)</div>
             <div className="total-value accent">
-              ${(Number(totals?.grossPay) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {amountsHidden ? '••••••' : `$${(Number(totals?.grossPay) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </div>
           </div>
         </motion.section>
@@ -413,6 +427,7 @@ function App() {
             sub="Total hrs × Rate" 
             color="var(--green)" 
             icon={<TrendingUp size={16} />} 
+            amountsHidden={amountsHidden}
           />
           <PayCard 
             label="PR Hacienda (10%)" 
@@ -421,6 +436,7 @@ function App() {
             color="var(--red)" 
             icon={<ShieldCheck size={16} />} 
             isNegative 
+            amountsHidden={amountsHidden}
           />
           <PayCard 
             label="Actual Net Pay" 
@@ -429,6 +445,7 @@ function App() {
             color="#fff" 
             icon={<CheckCircle2 size={16} />} 
             isStrong 
+            amountsHidden={amountsHidden}
           />
           <PayCard 
             label="Est. Self-Emp Tax" 
@@ -436,6 +453,7 @@ function App() {
             sub="15.3% to Save for IRS" 
             color="var(--amber)" 
             icon={<AlertCircle size={16} />} 
+            amountsHidden={amountsHidden}
           />
         </div>
 
@@ -446,34 +464,34 @@ function App() {
             
             <div className="grid-2" style={{ gap: '16px', marginBottom: '16px' }}>
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
-                <InputGroup label="Prev Total Gross ($)" type="number" value={profInfo.prevYtdGross} onChange={(v) => setProfInfo({ ...profInfo, prevYtdGross: v })} />
+                <InputGroup label="Prev Total Gross ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdGross} onChange={(v) => setProfInfo({ ...profInfo, prevYtdGross: v })} />
                 <div className="ytd-row mt-2">
                   <span>New YTD Gross:</span>
-                  <strong className="accent">${(totals.newYtdGross || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                  <strong className="accent">{amountsHidden ? '••••••' : `$${(totals.newYtdGross || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
                 </div>
               </div>
               
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
-                <InputGroup label="Prev PR Hacienda ($)" type="number" value={profInfo.prevYtdPrWh} onChange={(v) => setProfInfo({ ...profInfo, prevYtdPrWh: v })} />
+                <InputGroup label="Prev PR Hacienda ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdPrWh} onChange={(v) => setProfInfo({ ...profInfo, prevYtdPrWh: v })} />
                 <div className="ytd-row mt-2">
                   <span>New YTD PR Hacienda:</span>
-                  <strong className="accent" style={{ color: 'var(--red)' }}>${(totals.newYtdPrWh || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                  <strong className="accent" style={{ color: 'var(--red)' }}>{amountsHidden ? '••••••' : `$${(totals.newYtdPrWh || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
                 </div>
               </div>
 
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
-                <InputGroup label="Prev Net Pay ($)" type="number" value={profInfo.prevYtdNet} onChange={(v) => setProfInfo({ ...profInfo, prevYtdNet: v })} />
+                <InputGroup label="Prev Net Pay ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdNet} onChange={(v) => setProfInfo({ ...profInfo, prevYtdNet: v })} />
                 <div className="ytd-row mt-2">
                   <span>New YTD Net Pay:</span>
-                  <strong className="accent" style={{ color: 'var(--green)' }}>${(totals.newYtdNet || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                  <strong className="accent" style={{ color: 'var(--green)' }}>{amountsHidden ? '••••••' : `$${(totals.newYtdNet || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
                 </div>
               </div>
 
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
-                <InputGroup label="Prev Est. Self-Emp ($)" type="number" value={profInfo.prevYtdSelfEmp} onChange={(v) => setProfInfo({ ...profInfo, prevYtdSelfEmp: v })} />
+                <InputGroup label="Prev Est. Self-Emp ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdSelfEmp} onChange={(v) => setProfInfo({ ...profInfo, prevYtdSelfEmp: v })} />
                 <div className="ytd-row mt-2">
                   <span>New YTD Self-Emp Tax:</span>
-                  <strong className="accent" style={{ color: 'var(--amber)' }}>${(totals.newYtdSelfEmp || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                  <strong className="accent" style={{ color: 'var(--amber)' }}>{amountsHidden ? '••••••' : `$${(totals.newYtdSelfEmp || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
                 </div>
               </div>
             </div>
@@ -563,7 +581,7 @@ function InputGroup({ label, type = "text", value, onChange, min }) {
   );
 }
 
-function PayCard({ label, value, sub, color, icon, isNegative, isStrong }) {
+function PayCard({ label, value, sub, color, icon, isNegative, isStrong, amountsHidden }) {
   return (
     <div className={`pay-card glass ${isStrong ? 'strong' : ''}`}>
       <div className="pc-top">
@@ -571,7 +589,7 @@ function PayCard({ label, value, sub, color, icon, isNegative, isStrong }) {
         <div className="pc-label">{label}</div>
       </div>
       <div className="pc-val" style={{ color: isStrong ? '#fff' : color }}>
-        {isNegative ? '-' : ''}${ (Math.abs(parseFloat(value)) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+        {amountsHidden ? '••••••' : (isNegative ? '-' : '') + '$' + (Math.abs(parseFloat(value)) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
       </div>
       <div className="pc-sub">{sub}</div>
     </div>

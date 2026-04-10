@@ -15,6 +15,7 @@ The **MiniMed Personal Timesheet Application** is a professional, web-based tool
 - **Weekly Tracking:** Week-by-week navigation using Left/Right arrows with automatic date adjustment to Mondays and seamless YTD cumulative carry-over.
 - **Daily Detail:** Time entry (Start, Lunch, End) with automatic hour calculation and full-width work descriptions.
 - **Financial Dashboard:** Real-time summary of Weekly and YTD earnings, retentions, and estimated net pay.
+- **Privacy Mode:** Toggleable "Hidden Eye" icon in the header to mask sensitive dollar amounts for public viewing or screen sharing.
 - **Export:** High-quality PDF generation for local records.
 - **Sync Status:** Visual indicator for Supabase synchronization health.
 
