@@ -40,7 +40,7 @@ function App() {
     rolloverPrevWeek,
     forceSync
   } = useTimesheet();
-  const [amountsHidden, setAmountsHidden] = useState(false);
+  const [amountsHidden, setAmountsHidden] = useState(true);
 
   const [loggedIn, setLoggedIn] = useState(false);
   const handleLogout = async () => {
