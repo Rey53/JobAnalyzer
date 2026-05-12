@@ -73,6 +73,7 @@ function calculateRowHours(entry) {
 export function useTimesheet() {
   const [loading, setLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState('idle');
+  const carryOverYtd = useRef(false);
   const [profInfo, setProfInfo] = useState({
     name: 'Luis G. Reyes Morales',
     company: 'MiniMed – Juncos',
@@ -144,7 +145,16 @@ export function useTimesheet() {
       }
 
       if (!active) return;
-      if (initialProf) setProfInfo(prev => ({ ...prev, ...initialProf }));
+      if (initialProf) {
+        if (carryOverYtd.current) {
+          delete initialProf.prevYtdGross;
+          delete initialProf.prevYtdNet;
+          delete initialProf.prevYtdPrWh;
+          delete initialProf.prevYtdSelfEmp;
+        }
+        setProfInfo(prev => ({ ...prev, ...initialProf }));
+      }
+      carryOverYtd.current = false;
       
       const dates = buildDates(profInfo.weekStart);
       if (initialEntries && Array.isArray(initialEntries) && initialEntries.length === 7) {
@@ -184,6 +194,8 @@ export function useTimesheet() {
     const currentStart = new Date(profInfo.weekStart + 'T00:00:00');
     currentStart.setDate(currentStart.getDate() + (direction * 7));
     const newWeekStart = currentStart.toISOString().split('T')[0];
+
+    carryOverYtd.current = (direction === 1);
 
     // Reset weekly fields and set weekStart. 
     // The useEffect(..., [weekStart]) will handle data fetching and entry population.

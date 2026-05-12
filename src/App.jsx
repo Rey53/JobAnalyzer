@@ -220,6 +220,19 @@ function App() {
     );
   }
 
+  const getDepositDateText = (weekStartStr, currentWeekNum) => {
+    if (!weekStartStr) return '';
+    const d = new Date(weekStartStr + 'T00:00:00');
+    if (currentWeekNum % 2 !== 0) {
+      d.setDate(d.getDate() + 7);
+    }
+    d.setDate(d.getDate() + 17);
+    const m = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    const y = d.getFullYear();
+    return `The next deposit will be done on Thursday ${m}/${day}/${y}.`;
+  };
+
   return (
     <div className="app-wrapper">
       {/* ── HERO BANNER ── */}
@@ -292,7 +305,9 @@ function App() {
         </div>
         <div className="info-banner glass" style={{ marginTop: '-12px', marginBottom: '24px', borderColor: 'rgba(79, 110, 247, 0.3)', background: 'rgba(79, 110, 247, 0.05)' }}>
           <AlertCircle size={18} color="var(--accent)" />
-          <span><strong>Important:</strong> This timesheet must be submitted every Tuesday before 5:00 PM to accounts@eqvalpr.com.</span>
+          <span>
+            <strong>Important:</strong> This timesheet must be submitted every Tuesday before 5:00 PM to accounts@eqvalpr.com. {getDepositDateText(profInfo?.weekStart, weekNumber)}
+          </span>
         </div>
 
         {/* ── SECTION 1: HEADER INFO ── */}
@@ -441,7 +456,7 @@ function App() {
           <PayCard 
             label="Actual Net Pay" 
             value={totals?.netPay || 0} 
-            sub="Amount Paid to You" 
+            sub={amountsHidden ? "Amount Paid to You" : "ACTUAL NET PAY = GROSS PAY - (PR HACIENDA + EST. SELF-EMP TAX)"} 
             color="#fff" 
             icon={<CheckCircle2 size={16} />} 
             isStrong 
@@ -450,7 +465,7 @@ function App() {
           <PayCard 
             label="Est. Self-Emp Tax" 
             value={totals?.estimatedSelfEmp || 0} 
-            sub="15.3% to Save for IRS" 
+            sub={amountsHidden ? "15.3% (Medicare & FICA) to Save for IRS" : `FICA (12.4%): $${(totals?.ss || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} + Medicare (2.9%): $${(totals?.medicare || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`} 
             color="var(--amber)" 
             icon={<AlertCircle size={16} />} 
             amountsHidden={amountsHidden}
@@ -464,7 +479,7 @@ function App() {
             
             <div className="grid-2" style={{ gap: '16px', marginBottom: '16px' }}>
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
-                <InputGroup label="Prev Total Gross ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdGross} onChange={(v) => setProfInfo({ ...profInfo, prevYtdGross: v })} />
+                <InputGroup label="Prev Total Gross ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdGross} onChange={(v) => setProfInfo({ ...profInfo, prevYtdGross: v })} prefix="$" />
                 <div className="ytd-row mt-2">
                   <span>New YTD Gross:</span>
                   <strong className="accent">{amountsHidden ? '••••••' : `$${(totals.newYtdGross || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
@@ -472,7 +487,7 @@ function App() {
               </div>
               
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
-                <InputGroup label="Prev PR Hacienda ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdPrWh} onChange={(v) => setProfInfo({ ...profInfo, prevYtdPrWh: v })} />
+                <InputGroup label="Prev PR Hacienda ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdPrWh} onChange={(v) => setProfInfo({ ...profInfo, prevYtdPrWh: v })} prefix="$" />
                 <div className="ytd-row mt-2">
                   <span>New YTD PR Hacienda:</span>
                   <strong className="accent" style={{ color: 'var(--red)' }}>{amountsHidden ? '••••••' : `$${(totals.newYtdPrWh || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
@@ -480,7 +495,7 @@ function App() {
               </div>
 
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
-                <InputGroup label="Prev Net Pay ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdNet} onChange={(v) => setProfInfo({ ...profInfo, prevYtdNet: v })} />
+                <InputGroup label="Prev Net Pay ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdNet} onChange={(v) => setProfInfo({ ...profInfo, prevYtdNet: v })} prefix="$" />
                 <div className="ytd-row mt-2">
                   <span>New YTD Net Pay:</span>
                   <strong className="accent" style={{ color: 'var(--green)' }}>{amountsHidden ? '••••••' : `$${(totals.newYtdNet || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
@@ -488,7 +503,7 @@ function App() {
               </div>
 
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
-                <InputGroup label="Prev Est. Self-Emp ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdSelfEmp} onChange={(v) => setProfInfo({ ...profInfo, prevYtdSelfEmp: v })} />
+                <InputGroup label="Prev Est. Self-Emp ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdSelfEmp} onChange={(v) => setProfInfo({ ...profInfo, prevYtdSelfEmp: v })} prefix="$" />
                 <div className="ytd-row mt-2">
                   <span>New YTD Self-Emp Tax:</span>
                   <strong className="accent" style={{ color: 'var(--amber)' }}>{amountsHidden ? '••••••' : `$${(totals.newYtdSelfEmp || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
@@ -572,11 +587,44 @@ const TimeSelect = ({ value, onChange }) => {
   );
 };
 
-function InputGroup({ label, type = "text", value, onChange, min }) {
+function InputGroup({ label, type = "text", value, onChange, min, prefix }) {
+  const [focused, setFocused] = React.useState(false);
+
+  // Format to 2 decimal digits only when not focused and it's a monetary value
+  const displayValue = (!focused && prefix === '$' && value !== '' && !isNaN(value)) 
+    ? Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+    : value;
+
+  // We must use type="text" when formatting with commas so the browser doesn't clear the input
+  const currentType = type === 'password' ? 'password' : (!focused && prefix === '$' ? 'text' : type);
+
   return (
     <div className="input-group">
       <label className="label">{label}</label>
-      <input type={type} value={value} min={min} onChange={(e) => onChange(e.target.value)} />
+      <div style={{ position: 'relative' }}>
+        {prefix && type !== 'password' && (
+          <span style={{ 
+            position: 'absolute', 
+            left: '12px', 
+            top: '50%', 
+            transform: 'translateY(-50%)', 
+            color: 'var(--text-muted, #9ca3af)', 
+            pointerEvents: 'none',
+            fontSize: '0.9rem'
+          }}>
+            {prefix}
+          </span>
+        )}
+        <input 
+          type={currentType} 
+          value={displayValue} 
+          min={min} 
+          onChange={(e) => onChange(e.target.value)} 
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={prefix && type !== 'password' ? { paddingLeft: '28px' } : {}}
+        />
+      </div>
     </div>
   );
 }
