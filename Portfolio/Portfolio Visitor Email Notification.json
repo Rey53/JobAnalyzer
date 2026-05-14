@@ -1,0 +1,195 @@
+{
+  "name": "Portfolio Visitor Email Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "portfolio-visit",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "fcb47f8d-6b4a-46cf-bb0e-e3713a6a671c",
+      "name": "Webhook - Portfolio Visit",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        208,
+        64
+      ],
+      "webhookId": "portfolio-visit-tracker"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "visitorIP",
+              "value": "={{ $json.headers['x-forwarded-for'] || $json.headers['x-real-ip'] || 'Unknown' }}"
+            },
+            {
+              "name": "userAgent",
+              "value": "={{ $json.headers['user-agent'] || 'Unknown' }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}"
+            },
+            {
+              "name": "referrer",
+              "value": "={{ $json.headers['referer'] || 'Direct Visit' }}"
+            },
+            {
+              "name": "pageURL",
+              "value": "={{ $json.body.pageURL || 'portfolio.servicioxpert.com' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c22a09d2-5672-4fae-9f03-077db8959f88",
+      "name": "Extract Visitor Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        416,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@servicioxpert.com",
+        "toEmail": "valservicioxpert@gmail.com",
+        "subject": "=🔔 New Portfolio Visitor -  {{ $json.timestamp }}",
+        "text": "Another Great Visit!",
+        "options": {}
+      },
+      "id": "eaef9a9a-2611-48c4-b6a5-26ebb1d690c9",
+      "name": "Send Email Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        608,
+        112
+      ],
+      "webhookId": "21aac02c-db23-4c89-a476-58853fda43b3",
+      "credentials": {
+        "smtp": {
+          "id": "mE2Zy8PM6I0sXQfC",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"success\", \"message\": \"Visit tracked\", \"timestamp\": $json.timestamp } }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              }
+            ]
+          }
+        }
+      },
+      "id": "32d25bd5-ada1-4996-9287-92918161cac8",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        816,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "valservicioxpert@gmail.com",
+        "subject": "=🔔 New Portfolio Visitor - {{ $json.timestamp }}",
+        "message": "=🔔 New Portfolio Visitor - {{ $json.timestamp }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "noreply@servicioxpert.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        592,
+        -96
+      ],
+      "id": "ae8e7412-b03c-4006-9d9f-8ca04367aea9",
+      "name": "Send a message",
+      "webhookId": "630e7e14-7567-4f6d-923c-07d2f63341c2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "hJC5M5jSOl1Iy9AY",
+          "name": "Gmail account"
+        }
+      },
+      "disabled": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Portfolio Visit": {
+      "main": [
+        [
+          {
+            "node": "Extract Visitor Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Visitor Data": {
+      "main": [
+        [
+          {
+            "node": "Send Email Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Notification": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Puerto_Rico",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "3e8e6553-48a4-4fd8-acaa-4365f3f81c45",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bdbd1116cc67b309eacfdfe0cbaf62504cc8076561335fc3e77a399289095e78"
+  },
+  "id": "YbuRy-cQN4O7lH-DOnWNY",
+  "tags": []
+}
