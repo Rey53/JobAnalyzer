@@ -1,0 +1,66 @@
+{
+  "name": "Production - Timesheet Webhook -> Gmail",
+  "id": "4Zaa39oJeju2XhFi",
+  "active": true,
+  "nodes": [
+    {
+      "id": "webhook-prod",
+      "name": "Webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "timesheet-send",
+        "responseMode": "lastNode"
+      },
+      "position": [0, 0],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "zeTsYcO85tl5Bjea",
+          "name": "Gmail account"
+        }
+      },
+      "id": "gmail-prod",
+      "name": "Send Gmail",
+      "parameters": {
+        "message": "={{ $json.body.emailHtml }}",
+        "options": {
+          "ccList": "={{ $json.body.ccEmail }}"
+        },
+        "sendTo": "reyenergybroker@gmail.com",
+        "subject": "=[Timesheet] {{ $json.body.professionalName }} - {{ $json.body.weekStart }}"
+      },
+      "position": [300, 0],
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2
+    }
+  ],
+  "connections": {
+    "Send Gmail": {
+      "main": [[]]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send Gmail",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  }
+}

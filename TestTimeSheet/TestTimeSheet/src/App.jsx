@@ -19,9 +19,7 @@ import {
   CreditCard,
   RotateCw,
   ChevronLeft,
-  FileText,
-  Eye,
-  EyeOff
+  FileText
 } from 'lucide-react';
 import { useTimesheet } from './hooks/useTimesheet';
 import { supabase } from './lib/supabase';
@@ -40,7 +38,6 @@ function App() {
     rolloverPrevWeek,
     forceSync
   } = useTimesheet();
-  const [amountsHidden, setAmountsHidden] = useState(true);
 
   const [loggedIn, setLoggedIn] = useState(false);
   const handleLogout = async () => {
@@ -74,11 +71,11 @@ function App() {
       profSignDate: profInfo.profSignDate,
       supSignature: profInfo.supSignature,
       supSignDate: profInfo.supSignDate,
-      days: (entries || []).map(e => ({
+      days: entries.map(e => ({
         day: e.day,
         date: e.date,
         project: e.project,
-        hours: (Number(e.hours) || 0).toFixed(2),
+        hours: (parseFloat(e.hours) || 0).toFixed(2),
         desc: e.description
       })),
       rate: 53,
@@ -105,7 +102,7 @@ function App() {
       ccEmail: profInfo.ccEmail,
 
       generatedAt: new Date().toISOString(),
-      weekNumber: weekNumber || 1
+      tsNumber: profInfo.tsNumber || 1
     };
     
     payload.emailHtml = buildEmailHtml(payload);
@@ -220,19 +217,6 @@ function App() {
     );
   }
 
-  const getDepositDateText = (weekStartStr, currentWeekNum) => {
-    if (!weekStartStr) return '';
-    const d = new Date(weekStartStr + 'T00:00:00');
-    if (currentWeekNum % 2 !== 0) {
-      d.setDate(d.getDate() + 7);
-    }
-    d.setDate(d.getDate() + 17);
-    const m = (d.getMonth() + 1).toString().padStart(2, '0');
-    const day = d.getDate().toString().padStart(2, '0');
-    const y = d.getFullYear();
-    return `The next deposit will be done on Thursday ${m}/${day}/${y}.`;
-  };
-
   return (
     <div className="app-wrapper">
       {/* ── HERO BANNER ── */}
@@ -248,31 +232,16 @@ function App() {
           
           <div className="hero-right">
             <div className="nav-controls badge">
-              <button 
-                className="nav-btn" 
-                onClick={rolloverPrevWeek} 
-                title="Previous Week"
-                disabled={weekNumber <= 1}
-                style={{ opacity: weekNumber <= 1 ? 0.3 : 1, cursor: weekNumber <= 1 ? 'not-allowed' : 'pointer' }}
-              >
-                <ChevronLeft size={16} />
-              </button>
+              {weekNumber > 1 ? (
+                <button className="nav-btn" onClick={rolloverPrevWeek} title="Previous Week">
+                  <ChevronLeft size={16} />
+                </button>
+              ) : <div style={{width: 24}}></div>}
               <div className="week-display">
                 <Calendar size={14} /> Week #{weekNumber}
               </div>
               <button className="nav-btn" onClick={rolloverNewWeek} title="Next Week">
-                <ChevronRight size={16} />
-              </button>
-              
-              <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }}></div>
-              
-              <button 
-                className="nav-btn" 
-                onClick={() => setAmountsHidden(!amountsHidden)}
-                title={amountsHidden ? "Show Amounts" : "Hide Amounts"}
-                style={{ color: amountsHidden ? 'var(--accent)' : '#fff' }}
-              >
-                {amountsHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+                <RotateCw size={16} />
               </button>
             </div>
 
@@ -305,9 +274,7 @@ function App() {
         </div>
         <div className="info-banner glass" style={{ marginTop: '-12px', marginBottom: '24px', borderColor: 'rgba(79, 110, 247, 0.3)', background: 'rgba(79, 110, 247, 0.05)' }}>
           <AlertCircle size={18} color="var(--accent)" />
-          <span>
-            <strong>Important:</strong> This timesheet must be submitted every Tuesday before 5:00 PM to accounts@eqvalpr.com. {getDepositDateText(profInfo?.weekStart, weekNumber)}
-          </span>
+          <span><strong>Important:</strong> This timesheet must be submitted every Tuesday before 5:00 PM to accounts@eqvalpr.com.</span>
         </div>
 
         {/* ── SECTION 1: HEADER INFO ── */}
@@ -316,31 +283,31 @@ function App() {
             <User size={16} /> Professional & Project Info
           </div>
           <div className="grid-2">
-            <InputGroup label="Professional (Employee) Name" value={profInfo?.name || ''} onChange={(v) => setProfInfo({ ...profInfo, name: v })} />
-            <InputGroup label="Company / Client" value={profInfo?.company || ''} onChange={(v) => setProfInfo({ ...profInfo, company: v })} />
-            <InputGroup label="Job Title / Role" value={profInfo?.title || ''} onChange={(v) => setProfInfo({ ...profInfo, title: v })} />
-            <InputGroup label="Week Starting (Monday)" type="date" min="2026-03-30" value={profInfo?.weekStart || ''} onChange={(v) => setProfInfo({ ...profInfo, weekStart: v })} />
-            <InputGroup label="Supervisor Name" value={profInfo?.supervisor || ''} onChange={(v) => setProfInfo({ ...profInfo, supervisor: v })} />
-            <InputGroup label="Project / PO Code" value={profInfo?.projectCode || ''} onChange={(v) => setProfInfo({ ...profInfo, projectCode: v })} />
+            <InputGroup label="Professional (Employee) Name" value={profInfo.name} onChange={(v) => setProfInfo({ ...profInfo, name: v })} />
+            <InputGroup label="Company / Client" value={profInfo.company} onChange={(v) => setProfInfo({ ...profInfo, company: v })} />
+            <InputGroup label="Job Title / Role" value={profInfo.title} onChange={(v) => setProfInfo({ ...profInfo, title: v })} />
+            <InputGroup label="Week Starting (Monday)" type="date" min="2026-03-30" value={profInfo.weekStart} onChange={(v) => setProfInfo({ ...profInfo, weekStart: v })} />
+            <InputGroup label="Supervisor Name" value={profInfo.supervisor} onChange={(v) => setProfInfo({ ...profInfo, supervisor: v })} />
+            <InputGroup label="Project / PO Code" value={profInfo.projectCode} onChange={(v) => setProfInfo({ ...profInfo, projectCode: v })} />
+            <InputGroup label="Timesheet #" type="number" value={profInfo.tsNumber} onChange={(v) => setProfInfo({ ...profInfo, tsNumber: v })} />
           </div>
         </section>
 
         {/* ── SECTION 2: TOTALS BANNER ── */}
         <motion.section 
+          whileHover={{ scale: 1.01 }}
           className="total-banner glass"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
         >
           <div className="total-item">
             <div className="label">Total Hours This Week</div>
             <div className="total-value">
-              {totals?.totalHours || '0.00'} <span>hrs</span>
+              {totals.totalHours} <span>hrs</span>
             </div>
           </div>
           <div className="total-item align-right">
-            <div className="label">Gross Pay (Calculated)</div>
+            <div className="label">Gross Pay (Hidden)</div>
             <div className="total-value accent">
-              {amountsHidden ? '••••••' : `$${(Number(totals?.grossPay) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              ${(parseFloat(totals.grossPay) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
         </motion.section>
@@ -361,66 +328,67 @@ function App() {
                   <th className="center">Lunch Out</th>
                   <th className="center">Lunch In</th>
                   <th className="center">End</th>
+                  <th>Work Description</th>
                 </tr>
               </thead>
               <tbody>
-                {Array.isArray(entries) && entries.map((entry, i) => (
-                  <React.Fragment key={entry.day}>
-                    <tr className={i >= 5 ? 'weekend' : ''}>
-                      <td className="day-name">
-                        <div className={`dot ${[5,6].includes(i) ? 'weekend' : ''}`}></div>
-                        {entry.day}
-                      </td>
-                      <td className="center date-cell">
-                        <input 
-                          type="date" 
-                          min={i === 0 ? "2026-03-30" : ""}
-                          value={entry.date || ''} 
-                          readOnly={true}
-                          title="Change the Week Starting date above to pick another week"
-                          onChange={() => {}} 
-                        />
-                      </td>
-                      <td className={`center hours ${(Number(entry.hours) || 0) > 0 ? 'active' : ''}`}>{(Number(entry.hours) || 0).toFixed(2)}</td>
-                      <td className="center"><TimeSelect value={entry.start} onChange={(v) => {
-                        const newEntries = [...entries];
-                        newEntries[i].start = v;
-                        setEntries(newEntries);
-                      }} /></td>
-                      <td className="center"><TimeSelect value={entry.lunchOut} onChange={(v) => {
-                        const newEntries = [...entries];
-                        newEntries[i].lunchOut = v;
-                        setEntries(newEntries);
-                      }} /></td>
-                      <td className="center"><TimeSelect value={entry.lunchIn} onChange={(v) => {
-                        const newEntries = [...entries];
-                        newEntries[i].lunchIn = v;
-                        setEntries(newEntries);
-                      }} /></td>
-                      <td className="center"><TimeSelect value={entry.end} onChange={(v) => {
-                        const newEntries = [...entries];
-                        newEntries[i].end = v;
-                        setEntries(newEntries);
-                      }} /></td>
-                    </tr>
-                    <tr className="desc-row">
-                      <td colSpan="7">
-                        <textarea
-                          value={entry.description}
-                          onChange={(e) => {
+                {entries.map((entry, i) => (
+                  <tr key={entry.day}>
+                    <td className="day-name">
+                      <div className={`dot ${[5,6].includes(i) ? 'weekend' : ''}`}></div>
+                      {entry.day}
+                    </td>
+                    <td className="center date-cell">
+                      <input 
+                        type="date" 
+                        min={i === 0 ? "2026-03-30" : ""}
+                        value={entry.date || ''} 
+                        readOnly={i > 0}
+                        onChange={(e) => {
+                          if (i === 0) {
+                            // Monday drives all dates
+                            setProfInfo({ ...profInfo, weekStart: e.target.value });
+                          } else {
                             const newEntries = [...entries];
-                            newEntries[i].description = e.target.value;
+                            newEntries[i] = { ...newEntries[i], date: e.target.value };
                             setEntries(newEntries);
-                          }}
-                          onInput={(e) => {
-                            e.target.style.height = 'auto';
-                            e.target.style.height = e.target.scrollHeight + 'px';
-                          }}
-                          placeholder={`Work performed on ${entry.day}...`}
-                        />
-                      </td>
-                    </tr>
-                  </React.Fragment>
+                          }
+                        }} 
+                      />
+                    </td>
+                    <td className={`center hours ${entry.hours > 0 ? 'active' : ''}`}>{parseFloat(entry.hours || 0).toFixed(2)}</td>
+                    <td className="center"><TimeSelect value={entry.start} onChange={(v) => {
+                      const newEntries = [...entries];
+                      newEntries[i].start = v;
+                      setEntries(newEntries);
+                    }} /></td>
+                    <td className="center"><TimeSelect value={entry.lunchOut} onChange={(v) => {
+                      const newEntries = [...entries];
+                      newEntries[i].lunchOut = v;
+                      setEntries(newEntries);
+                    }} /></td>
+                    <td className="center"><TimeSelect value={entry.lunchIn} onChange={(v) => {
+                      const newEntries = [...entries];
+                      newEntries[i].lunchIn = v;
+                      setEntries(newEntries);
+                    }} /></td>
+                    <td className="center"><TimeSelect value={entry.end} onChange={(v) => {
+                      const newEntries = [...entries];
+                      newEntries[i].end = v;
+                      setEntries(newEntries);
+                    }} /></td>
+                    <td className="desc-cell">
+                      <textarea 
+                        value={entry.description} 
+                        onChange={(e) => {
+                          const newEntries = [...entries];
+                          newEntries[i].description = e.target.value;
+                          setEntries(newEntries);
+                        }}
+                        placeholder="Work performed..."
+                      />
+                    </td>
+                  </tr>
                 ))}
               </tbody>
               <tfoot>
@@ -438,37 +406,33 @@ function App() {
         <div className="pay-summary-grid">
           <PayCard 
             label="Gross Pay" 
-            value={totals?.grossPay || 0} 
+            value={totals.grossPay} 
             sub="Total hrs × Rate" 
             color="var(--green)" 
             icon={<TrendingUp size={16} />} 
-            amountsHidden={amountsHidden}
           />
           <PayCard 
             label="PR Hacienda (10%)" 
-            value={totals?.prWh || 0} 
+            value={totals.prWh} 
             sub="Client Withheld" 
             color="var(--red)" 
             icon={<ShieldCheck size={16} />} 
             isNegative 
-            amountsHidden={amountsHidden}
           />
           <PayCard 
             label="Actual Net Pay" 
-            value={totals?.netPay || 0} 
-            sub={amountsHidden ? "Amount Paid to You" : "ACTUAL NET PAY = GROSS PAY - (PR HACIENDA + EST. SELF-EMP TAX)"} 
+            value={totals.netPay} 
+            sub="Amount Paid to You" 
             color="#fff" 
             icon={<CheckCircle2 size={16} />} 
             isStrong 
-            amountsHidden={amountsHidden}
           />
           <PayCard 
             label="Est. Self-Emp Tax" 
-            value={totals?.estimatedSelfEmp || 0} 
-            sub={amountsHidden ? "15.3% (Medicare & FICA) to Save for IRS" : `FICA (12.4%): $${(totals?.ss || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} + Medicare (2.9%): $${(totals?.medicare || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`} 
+            value={totals.estimatedSelfEmp} 
+            sub="15.3% to Save for IRS" 
             color="var(--amber)" 
             icon={<AlertCircle size={16} />} 
-            amountsHidden={amountsHidden}
           />
         </div>
 
@@ -479,34 +443,34 @@ function App() {
             
             <div className="grid-2" style={{ gap: '16px', marginBottom: '16px' }}>
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
-                <InputGroup label="Prev Total Gross ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdGross} onChange={(v) => setProfInfo({ ...profInfo, prevYtdGross: v })} prefix="$" />
+                <InputGroup label="Prev Total Gross ($)" type="number" value={profInfo.prevYtdGross} onChange={(v) => setProfInfo({ ...profInfo, prevYtdGross: v })} />
                 <div className="ytd-row mt-2">
                   <span>New YTD Gross:</span>
-                  <strong className="accent">{amountsHidden ? '••••••' : `$${(totals.newYtdGross || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
+                  <strong className="accent">${(totals.newYtdGross || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                 </div>
               </div>
               
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
-                <InputGroup label="Prev PR Hacienda ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdPrWh} onChange={(v) => setProfInfo({ ...profInfo, prevYtdPrWh: v })} prefix="$" />
+                <InputGroup label="Prev PR Hacienda ($)" type="number" value={profInfo.prevYtdPrWh} onChange={(v) => setProfInfo({ ...profInfo, prevYtdPrWh: v })} />
                 <div className="ytd-row mt-2">
                   <span>New YTD PR Hacienda:</span>
-                  <strong className="accent" style={{ color: 'var(--red)' }}>{amountsHidden ? '••••••' : `$${(totals.newYtdPrWh || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
+                  <strong className="accent" style={{ color: 'var(--red)' }}>${(totals.newYtdPrWh || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                 </div>
               </div>
 
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
-                <InputGroup label="Prev Net Pay ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdNet} onChange={(v) => setProfInfo({ ...profInfo, prevYtdNet: v })} prefix="$" />
+                <InputGroup label="Prev Net Pay ($)" type="number" value={profInfo.prevYtdNet} onChange={(v) => setProfInfo({ ...profInfo, prevYtdNet: v })} />
                 <div className="ytd-row mt-2">
                   <span>New YTD Net Pay:</span>
-                  <strong className="accent" style={{ color: 'var(--green)' }}>{amountsHidden ? '••••••' : `$${(totals.newYtdNet || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
+                  <strong className="accent" style={{ color: 'var(--green)' }}>${(totals.newYtdNet || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                 </div>
               </div>
 
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px' }}>
-                <InputGroup label="Prev Est. Self-Emp ($)" type={amountsHidden ? "password" : "number"} value={profInfo.prevYtdSelfEmp} onChange={(v) => setProfInfo({ ...profInfo, prevYtdSelfEmp: v })} prefix="$" />
+                <InputGroup label="Prev Est. Self-Emp ($)" type="number" value={profInfo.prevYtdSelfEmp} onChange={(v) => setProfInfo({ ...profInfo, prevYtdSelfEmp: v })} />
                 <div className="ytd-row mt-2">
                   <span>New YTD Self-Emp Tax:</span>
-                  <strong className="accent" style={{ color: 'var(--amber)' }}>{amountsHidden ? '••••••' : `$${(totals.newYtdSelfEmp || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
+                  <strong className="accent" style={{ color: 'var(--amber)' }}>${(totals.newYtdSelfEmp || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                 </div>
               </div>
             </div>
@@ -587,49 +551,16 @@ const TimeSelect = ({ value, onChange }) => {
   );
 };
 
-function InputGroup({ label, type = "text", value, onChange, min, prefix }) {
-  const [focused, setFocused] = React.useState(false);
-
-  // Format to 2 decimal digits only when not focused and it's a monetary value
-  const displayValue = (!focused && prefix === '$' && value !== '' && !isNaN(value)) 
-    ? Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
-    : value;
-
-  // We must use type="text" when formatting with commas so the browser doesn't clear the input
-  const currentType = type === 'password' ? 'password' : (!focused && prefix === '$' ? 'text' : type);
-
+function InputGroup({ label, type = "text", value, onChange, min }) {
   return (
     <div className="input-group">
       <label className="label">{label}</label>
-      <div style={{ position: 'relative' }}>
-        {prefix && type !== 'password' && (
-          <span style={{ 
-            position: 'absolute', 
-            left: '12px', 
-            top: '50%', 
-            transform: 'translateY(-50%)', 
-            color: 'var(--text-muted, #9ca3af)', 
-            pointerEvents: 'none',
-            fontSize: '0.9rem'
-          }}>
-            {prefix}
-          </span>
-        )}
-        <input 
-          type={currentType} 
-          value={displayValue} 
-          min={min} 
-          onChange={(e) => onChange(e.target.value)} 
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          style={prefix && type !== 'password' ? { paddingLeft: '28px' } : {}}
-        />
-      </div>
+      <input type={type} value={value} min={min} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }
 
-function PayCard({ label, value, sub, color, icon, isNegative, isStrong, amountsHidden }) {
+function PayCard({ label, value, sub, color, icon, isNegative, isStrong }) {
   return (
     <div className={`pay-card glass ${isStrong ? 'strong' : ''}`}>
       <div className="pc-top">
@@ -637,7 +568,7 @@ function PayCard({ label, value, sub, color, icon, isNegative, isStrong, amounts
         <div className="pc-label">{label}</div>
       </div>
       <div className="pc-val" style={{ color: isStrong ? '#fff' : color }}>
-        {amountsHidden ? '••••••' : (isNegative ? '-' : '') + '$' + (Math.abs(parseFloat(value)) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+        {isNegative ? '-' : ''}${ (Math.abs(parseFloat(value)) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
       </div>
       <div className="pc-sub">{sub}</div>
     </div>

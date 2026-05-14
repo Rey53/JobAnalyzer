@@ -13,14 +13,12 @@ const WEEKEND_INDICES = [5, 6];
 const WEEK_ONE_START = new Date('2026-03-30T00:00:00'); // 03/30/2026 = Week 1
 
 function getMonday() {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  const Y = d.getFullYear();
-  const M = (d.getMonth() + 1).toString().padStart(2, '0');
-  const D = d.getDate().toString().padStart(2, '0');
-  const formatted = `${Y}-${M}-${D}`;
+  const today = new Date();
+  const day = today.getDay();
+  const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+  const mon = new Date(today);
+  mon.setDate(diff);
+  const formatted = mon.toISOString().split('T')[0];
   return formatted < '2026-03-30' ? '2026-03-30' : formatted;
 }
 
@@ -73,13 +71,13 @@ function calculateRowHours(entry) {
 export function useTimesheet() {
   const [loading, setLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState('idle');
-  const carryOverYtd = useRef(false);
   const [profInfo, setProfInfo] = useState({
     name: 'Luis G. Reyes Morales',
     company: 'MiniMed – Juncos',
     title: 'Sr. Quality Engineer',
     supervisor: 'Charlene González',
     projectCode: 'EQValPR',
+    tsNumber: 1,
     weekStart: getMonday(),
     prevYtdGross: 0,
     prevYtdNet: 0,
@@ -110,75 +108,60 @@ export function useTimesheet() {
 
   // ── LOAD INITIAL DATA (LocalStorage then Supabase) ──
   useEffect(() => {
-    let active = true;
     async function init() {
       setSyncStatus('fetching');
-      const saved = localStorage.getItem('minimed_app_state_v2');
-      let initialProf = null;
-      let initialEntries = null;
 
+      // 1. First try LocalStorage (fastest)
+      const saved = localStorage.getItem('minimed_app_state_v2');
       if (saved) {
         try {
           const data = JSON.parse(saved);
-          if (data.profInfo && (loading || data.profInfo.weekStart === profInfo.weekStart)) {
-            initialProf = data.profInfo;
-          }
-          if (data.entries && (loading || data.profInfo?.weekStart === profInfo.weekStart)) {
-            initialEntries = data.entries;
-          }
-        } catch (e) {}
+          if (data.profInfo) setProfInfo(prev => ({ ...prev, ...data.profInfo }));
+          if (data.entries) setEntries(data.entries);
+        } catch (e) {
+          console.error('LocalStorage restore failed', e);
+        }
       }
 
+      // 2. Then try Cloud (Supabase) to get most recent
       try {
         const { data: { user } } = await supabase.auth.getUser();
         const email = user?.email || profInfo.recipientEmail;
+
         if (email) {
-          const { data: cloud } = await supabase.from('timesheets').select('payload').eq('professional_email', email).eq('payload->>weekStart', profInfo.weekStart).order('updated_at', { ascending: false }).limit(1).single();
-          if (active && cloud?.payload) {
-            initialProf = { ...initialProf, ...cloud.payload.profInfo };
-            initialEntries = cloud.payload.entries;
+          const { data: cloud, error } = await supabase
+            .from('timesheets')
+            .select('payload')
+            .eq('professional_email', email)
+            .eq('payload->>weekStart', profInfo.weekStart)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (cloud?.payload) {
+            setProfInfo(prev => ({ ...prev, ...cloud.payload.profInfo }));
+            setEntries(cloud.payload.entries);
             setSyncStatus('saved');
+          } else {
+            setSyncStatus('idle');
           }
         }
-      } catch (e) {} finally {
-        if (active) setLoading(false);
+      } catch (e) {
+        console.warn('Cloud fetch failed or no data found', e);
+        setSyncStatus('idle');
+      } finally {
+        setLoading(false);
       }
-
-      if (!active) return;
-      if (initialProf) {
-        if (carryOverYtd.current) {
-          delete initialProf.prevYtdGross;
-          delete initialProf.prevYtdNet;
-          delete initialProf.prevYtdPrWh;
-          delete initialProf.prevYtdSelfEmp;
-        }
-        setProfInfo(prev => ({ ...prev, ...initialProf }));
-      }
-      carryOverYtd.current = false;
-      
-      const dates = buildDates(profInfo.weekStart);
-      if (initialEntries && Array.isArray(initialEntries) && initialEntries.length === 7) {
-        setEntries(initialEntries.map((e, i) => ({ ...e, date: dates[i] })));
-      } else {
-        // Start a fresh, blank timesheet for the new week
-        setEntries(DAYS.map((day, i) => ({
-          day,
-          date: dates[i],
-          start: WEEKEND_INDICES.includes(i) ? '' : '08:00',
-          lunchOut: WEEKEND_INDICES.includes(i) ? '' : '12:00',
-          lunchIn: WEEKEND_INDICES.includes(i) ? '' : '13:00',
-          end: WEEKEND_INDICES.includes(i) ? '' : '17:00',
-          description: ''
-        })));
-      }
-      if (syncStatus === 'fetching') setSyncStatus('idle');
     }
     init();
-    return () => { active = false; };
-  }, [profInfo.weekStart]);
+  }, [profInfo.weekStart]); // Re-fetch if week changes manually
 
-  // Hook 6: Placeholder to maintain same number of hooks as previous version to avoid HMR issues
-  useEffect(() => {}, []);
+  // ── AUTO-POPULATE DATES WHEN WEEK START CHANGES ──
+  useEffect(() => {
+    if (!profInfo.weekStart) return;
+    const dates = buildDates(profInfo.weekStart);
+    setEntries(prev => prev.map((e, i) => ({ ...e, date: dates[i] })));
+  }, [profInfo.weekStart]);
 
   // ── WEEK NUMBER (calculated from 03/30/2026 = Week 1) ──
   const weekNumber = useMemo(() => {
@@ -195,24 +178,24 @@ export function useTimesheet() {
     currentStart.setDate(currentStart.getDate() + (direction * 7));
     const newWeekStart = currentStart.toISOString().split('T')[0];
 
-    carryOverYtd.current = (direction === 1);
-
-    // Reset weekly fields and set weekStart. 
-    // The useEffect(..., [weekStart]) will handle data fetching and entry population.
     setProfInfo(prev => ({
       ...prev,
       weekStart: newWeekStart,
       comments: '',
       profSignature: '',
-      supSignature: '',
-      // Carry over YTD values to the next week (if they don't exist in Supabase yet)
-      ...(direction === 1 ? {
-        prevYtdGross: totals.newYtdGross,
-        prevYtdNet: totals.newYtdNet,
-        prevYtdPrWh: totals.newYtdPrWh,
-        prevYtdSelfEmp: totals.newYtdSelfEmp
-      } : {})
+      supSignature: ''
     }));
+
+    const newDates = buildDates(newWeekStart);
+    setEntries(DAYS.map((day, i) => ({
+      day,
+      date: newDates[i],
+      start: WEEKEND_INDICES.includes(i) ? '' : '08:00',
+      lunchOut: WEEKEND_INDICES.includes(i) ? '' : '12:00',
+      lunchIn: WEEKEND_INDICES.includes(i) ? '' : '13:00',
+      end: WEEKEND_INDICES.includes(i) ? '' : '17:00',
+      description: ''
+    })));
   };
 
   const rolloverNewWeek = () => navigateWeek(1);
@@ -273,9 +256,6 @@ export function useTimesheet() {
     if (loading) return;
     setSyncStatus('syncing');
     try {
-      const email = profInfo.recipientEmail;
-      if (!email) return;
-
       const payload = { 
         profInfo, 
         entries: entriesWithHours, 
@@ -284,15 +264,32 @@ export function useTimesheet() {
         weekStart: profInfo.weekStart
       };
 
-      const { data: existing } = await supabase.from('timesheets').select('id').eq('professional_email', email).eq('payload->>weekStart', profInfo.weekStart).limit(1);
+      const { data: existing, error: selErr } = await supabase
+        .from('timesheets')
+        .select('id')
+        .eq('professional_email', profInfo.recipientEmail)
+        .eq('payload->>weekStart', profInfo.weekStart)
+        .limit(1);
 
+      if (selErr) throw selErr;
+
+      let resError;
       if (existing && existing.length > 0) {
-        await supabase.from('timesheets').update({ payload, updated_at: new Date().toISOString() }).eq('id', existing[0].id);
+        const { error } = await supabase.from('timesheets').update({ payload, updated_at: new Date().toISOString() }).eq('id', existing[0].id);
+        resError = error;
       } else {
-        await supabase.from('timesheets').insert([{ payload, professional_email: email, updated_at: new Date().toISOString() }]);
+        const { error } = await supabase.from('timesheets').insert([{
+          payload,
+          professional_email: profInfo.recipientEmail,
+          updated_at: new Date().toISOString()
+        }]);
+        resError = error;
       }
+
+      if (resError) throw resError;
       setSyncStatus('saved');
     } catch (e) {
+      console.error('Supabase Sync Error', e);
       setSyncStatus('error');
     }
   };
@@ -300,11 +297,14 @@ export function useTimesheet() {
   // ── SUPABASE SYNC (debounced) ──
   const syncTimer = useRef(null);
   useEffect(() => {
-    if (loading || syncStatus === 'fetching') return;
+    if (loading || syncStatus !== 'pending') return;
+
     if (syncTimer.current) clearTimeout(syncTimer.current);
+
     syncTimer.current = setTimeout(performSync, 2000);
+
     return () => clearTimeout(syncTimer.current);
-  }, [profInfo, entries]);
+  }, [profInfo, entries, entriesWithHours, totals, loading, syncStatus]);
 
   const forceSync = async () => {
     if (syncTimer.current) clearTimeout(syncTimer.current);

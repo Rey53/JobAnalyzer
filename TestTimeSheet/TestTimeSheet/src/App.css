@@ -179,7 +179,7 @@
 
 /* ── TABLE ── */
 .table-wrapper { overflow-x: auto; margin: -10px; padding: 10px; }
-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+table { width: 100%; border-collapse: collapse; min-width: 900px; }
 th { text-align: left; padding: 14px 16px; font-size: 0.65rem; text-transform: uppercase; color: var(--muted); letter-spacing: 1px; }
 td { padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); vertical-align: middle; }
 
@@ -187,13 +187,7 @@ td { padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); vertical
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 .dot.weekend { background: var(--muted); }
 
-.hours { 
-  font-weight: 700; 
-  font-size: 1.1rem;
-  color: var(--primary);
-  font-variant-numeric: tabular-nums;
-}
-.hours::after { content: ' hrs'; font-size: 0.7rem; opacity: 0.6; margin-left: 2px; }
+.hours { font-size: 1.2rem; font-weight: 800; color: var(--muted); opacity: 0.5; }
 .hours.active { color: var(--green); opacity: 1; text-shadow: 0 0 10px rgba(34, 197, 94, 0.3); }
 
 .center { text-align: center; }
@@ -239,21 +233,17 @@ td { padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); vertical
 }
 
 .date-cell input[type="date"] { 
-  width: 135px; 
-  font-size: 0.85rem; 
-  padding: 8px 10px; 
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
+  width: 130px; 
+  font-size: 0.78rem; 
+  padding: 6px 8px; 
+  background: rgba(0, 0, 0, 0.3); 
   color: var(--text);
-  font-variant-numeric: tabular-nums;
-  line-height: normal;
-  height: 38px;
+  color-scheme: dark;
 }
-.date-cell input[type="date"]:read-only {
-  background: rgba(0,0,0,0.1);
-  border-color: transparent;
+.date-cell input[type="date"][readonly] {
+  opacity: 0.6;
   cursor: default;
+  pointer-events: none;
 }
 
 /* Week Badge */
@@ -264,35 +254,7 @@ td { padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); vertical
   font-size: 0.85rem !important;
   font-weight: 800 !important;
 }
-/* ── WORK DESCRIPTION ROW ── */
-.desc-row td {
-  padding: 0 16px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-.desc-row textarea {
-  width: 100%;
-  min-height: 80px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: var(--text);
-  padding: 12px;
-  font-family: inherit;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  resize: vertical;
-  display: block;
-  transition: all 0.2s ease;
-}
-.desc-row textarea:focus {
-  border-color: var(--accent);
-  background: rgba(79,110,247,0.06);
-  outline: none;
-}
-.desc-row textarea::placeholder {
-  color: var(--muted);
-  opacity: 0.6;
-}
+.desc-cell textarea { font-size: 0.78rem; border-color: transparent; }
 
 /* Force dark backgrounds on native selects and options */
 select, option {
