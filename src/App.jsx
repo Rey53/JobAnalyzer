@@ -233,6 +233,24 @@ function App() {
     return `The next deposit will be done on Thursday ${m}/${day}/${y}.`;
   };
 
+  const getMinimedTenureText = () => {
+    const start = new Date('2026-03-30T00:00:00');
+    const today = new Date();
+    const isFuture = today < start;
+    const d1 = isFuture ? today : start;
+    const d2 = isFuture ? start : today;
+    
+    let months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+    let days = d2.getDate() - d1.getDate();
+    if (days < 0) {
+      months--;
+      const prevMonth = new Date(d2.getFullYear(), d2.getMonth(), 0);
+      days += prevMonth.getDate();
+    }
+    
+    return `Time with Minimed: ${months} month(s) and ${days} day(s) (Since March 30, 2026)`;
+  };
+
   return (
     <div className="app-wrapper">
       {/* ── HERO BANNER ── */}
@@ -299,6 +317,10 @@ function App() {
       </header>
 
       <main className="container main">
+        <div className="info-banner glass" style={{ marginBottom: '12px' }}>
+          <Calendar size={18} color="var(--accent)" />
+          <span><strong>{getMinimedTenureText()}</strong></span>
+        </div>
         <div className="info-banner glass">
           <AlertCircle size={18} color="var(--amber)" />
           <span>Rate: <strong>Applied</strong> · PR Withholding: <strong>10%</strong> (Hacienda – Independent Contractor) · Both PR & Federal retention applied automatically.</span>
