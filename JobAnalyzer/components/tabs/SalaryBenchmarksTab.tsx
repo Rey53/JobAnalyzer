@@ -207,12 +207,12 @@ export const SalaryBenchmarksTab: React.FC<TabProps> = ({ data }) => {
                     <div className="grid md:grid-cols-4 gap-4">
                         <div className="bg-slate-800/80 rounded-lg p-4 border border-slate-700/50 backdrop-blur-sm">
                             <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">Model Version</div>
-                            <div className="text-emerald-400 font-mono text-lg">GEMINI 2.5/PRO</div>
+                            <div className="text-emerald-400 font-mono text-lg">AI + DATED PR INPUTS</div>
                             <div className="text-xs text-slate-500 mt-1">Specialized PR Market</div>
                         </div>
                         <div className="bg-slate-800/80 rounded-lg p-4 border border-slate-700/50 backdrop-blur-sm">
                             <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">Data Recency</div>
-                            <div className="text-emerald-400 font-mono text-lg animate-pulse">LIVE T-0</div>
+                            <div className="text-emerald-400 font-mono text-lg">2026-Q3</div>
                             <div className="text-xs text-slate-500 mt-1">Grounding Activated</div>
                         </div>
                         <div className="bg-slate-800/80 rounded-lg p-4 border border-slate-700/50 backdrop-blur-sm">

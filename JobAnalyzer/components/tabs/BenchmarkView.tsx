@@ -14,12 +14,12 @@ export const BenchmarkView: React.FC = () => {
     const [selectedRole, setSelectedRole] = useState(jobTitles[0]);
     const [selectedSeniority, setSelectedSeniority] = useState('Mid-Level (3-7 years)');
 
-    // Dynamic calculation based on PR Market Data
+    // Transparent planning model. This is not represented as a live salary survey.
     const metrics = useMemo(() => {
-        // Base median across all pharma roles in PR
+        // Planning anchor used to compare scenarios consistently.
         const baseMedian = 78000;
         
-        // Role-based adjustment (Simulated intelligence)
+        // Disclosed role-category adjustment.
         let roleMultiplier = 1.0;
         if (selectedRole.includes('Engineer')) roleMultiplier = 1.15;
         if (selectedRole.includes('Manager')) roleMultiplier = 1.3;
@@ -51,7 +51,10 @@ export const BenchmarkView: React.FC = () => {
         <div className="p-8">
             <div className="flex items-center gap-3 mb-8">
                 <TrendingUp className="w-8 h-8 text-blue-600" />
-                <h2 className="text-3xl font-black text-slate-900">PR Pharma Salary Benchmarks</h2>
+                <div>
+                    <h2 className="font-display text-3xl font-semibold tracking-tight text-slate-900">PR salary scenario planner</h2>
+                    <p className="mt-1 text-sm text-slate-500">Transparent planning ranges—not a live employer salary survey.</p>
+                </div>
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">
@@ -89,9 +92,9 @@ export const BenchmarkView: React.FC = () => {
                     
                     <div className="bg-blue-600 p-6 rounded-xl text-white shadow-lg">
                         <Award className="w-8 h-8 mb-4 text-blue-200" />
-                        <h4 className="font-bold text-xl mb-2">Recruiter Insight</h4>
+                        <h4 className="font-bold text-xl mb-2">Use the posted range first</h4>
                         <p className="text-blue-100 text-sm">
-                            Tier 1 companies (Amgen, AbbVie) typically pay 15-22% above these base benchmarks due to specialized GAMP5 requirements.
+                            Employer, shift, site, validation scope, and bonus eligibility can move compensation materially. Treat this scenario as a negotiation prompt and verify it against the job posting or recruiter.
                         </p>
                     </div>
                 </div>
@@ -123,7 +126,7 @@ export const BenchmarkView: React.FC = () => {
                                 </tr>
                                 <tr>
                                     <td className="px-6 py-4 font-semibold text-slate-700">Sign-on Bonus</td>
-                                    <td className="px-6 py-4 text-slate-600 text-xs">Simulated min</td>
+                                    <td className="px-6 py-4 text-slate-600 text-xs">Scenario floor</td>
                                     <td className="px-6 py-4 text-slate-600 font-bold">${metrics.bonus.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-slate-600 text-xs text-right">Site specific</td>
                                 </tr>
@@ -134,9 +137,9 @@ export const BenchmarkView: React.FC = () => {
                     <div className="mt-8 flex items-start gap-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
                         <MapPin className="w-6 h-6 text-orange-500 shrink-0 mt-1" />
                         <div>
-                            <h5 className="font-bold text-orange-800">Regional Variance</h5>
+                            <h5 className="font-bold text-orange-800">What this model excludes</h5>
                             <p className="text-orange-700 text-sm">
-                                Roles based in San Juan/Guaynabo (Metro) carry a 7% cost-of-living premium compared to roles in the Southern hub (Ponce/Juana Díaz).
+                                It does not automatically add a metro premium or infer company pay. Housing, tolls, shift differential, overtime, bonus, and benefits should be validated for the specific offer.
                             </p>
                         </div>
                     </div>

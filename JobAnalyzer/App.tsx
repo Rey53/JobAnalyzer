@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Moon, Sun } from "lucide-react";
+import { BookOpen, BriefcaseBusiness, CalendarRange, ChartNoAxesCombined, FileSearch, Moon, Sun } from "lucide-react";
 import { GoogleGenAI, Type } from "@google/genai";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -13,8 +13,10 @@ import { InstructionsView } from "./components/tabs/InstructionsView";
 import { CVAnalysisTab } from "./components/tabs/CVAnalysisTab";
 import type { FormData, AnalysisData } from "./types";
 import { AppState, ActiveTab } from "./types";
-import { isAuthenticated, enforceAuthentication } from "./utils/auth";
+import { enforceAuthentication, isAuthenticated } from "./utils/auth";
 import { getDistance, calculateCommuteCosts, BENCHMARKS } from "./utils/prData";
+
+const usesHostedChatGPTAuth = import.meta.env.VITE_CHATGPT_AUTH === "true";
 
 // This is a simplified utility for converting a File to a base64 string
 const fileToBase64 = (file: File): Promise<string> =>
@@ -30,7 +32,7 @@ const fileToBase64 = (file: File): Promise<string> =>
   });
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(usesHostedChatGPTAuth);
   const [activeTab, setActiveTab] = useState<ActiveTab>(ActiveTab.ANALYZER);
   const [appState, setAppState] = useState<AppState>(AppState.INITIAL);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -40,31 +42,24 @@ export default function App() {
     return saved ? JSON.parse(saved) : false;
   });
 
-  // Security: Check authentication on mount and enforce it
   useEffect(() => {
+    if (usesHostedChatGPTAuth) return;
     enforceAuthentication();
     setIsLoggedIn(isAuthenticated());
 
-    // Prevent browser back button bypass
     const handlePopState = () => {
-      if (!isAuthenticated()) {
-        window.location.reload();
-      }
+      if (!isAuthenticated()) window.location.reload();
     };
-
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  // Security: Periodic authentication check
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (!isAuthenticated()) {
-        setIsLoggedIn(false);
-      }
-    }, 60000); // Check every minute
-
-    return () => clearInterval(interval);
+    if (usesHostedChatGPTAuth) return;
+    const interval = window.setInterval(() => {
+      if (!isAuthenticated()) setIsLoggedIn(false);
+    }, 60000);
+    return () => window.clearInterval(interval);
   }, []);
 
   // Dark mode persistence
@@ -81,9 +76,7 @@ export default function App() {
     setIsDarkMode(!isDarkMode);
   };
 
-  const handleLoginSuccess = () => {
-    setIsLoggedIn(true);
-  };
+  const handleLoginSuccess = () => setIsLoggedIn(true);
 
   const handleAnalysis = useCallback(async (formData: FormData) => {
     setAppState(AppState.LOADING);
@@ -124,8 +117,8 @@ export default function App() {
             Provide a comprehensive, data-driven analysis using your industry-specific Knowledge Base (KB).
 
             **Expert Recruiter Constraints (Hardcoded PR Data):**
-            - **Current Gasoline Price**: $0.91/L (Regular)
-            - **LUMA Energy Rate**: $0.33/kWh (Residential Average)
+            - **Regular Gasoline Planning Input**: $${BENCHMARKS.gasPricePerLiter.toFixed(3)}/L (${BENCHMARKS.gasPriceAsOf}; DACO published range ${BENCHMARKS.gasPriceRange})
+            - **Residential Electricity Planning Input**: $${BENCHMARKS.lumaRate.toFixed(5)}/kWh (${BENCHMARKS.lumaRateAsOf}; PREB GRS, 800 kWh)
             - **Company Tiering**: Tier 1 (Amgen, AbbVie, Pfizer, Lilly), Tier 2 (Medtronic, Baxter, Stryker).
             - **Compliance Assessment**: For Validation or Engineering roles, MUST check for GAMP5, 21 CFR Part 11, and CSA/CSV expertise.
 
@@ -153,11 +146,11 @@ export default function App() {
             - Contract Type (Modality): ${formData.modality}
 
             **Analysis Request (Expert Recruitment Perspective):**
-            1.  **Company Intelligence**: Provide a "Tier" classification. Use a real-time web search to find the latest quarterly earnings (Q3/Q4 2024 or Q1 2025). Include the specific manufacturing presence in ${formData.workingIn}.
+            1.  **Company Intelligence**: Provide a "Tier" classification. Search for the latest available quarterly or annual filing, state its reporting period, and include evidence for any manufacturing presence in ${formData.workingIn}.
             2.  **Commute & TCOL Analysis**: Estimated distance and time from ${formData.livingIn} to ${formData.workingIn}. 
                 - **Distance**: Provide in MILES (One Way and Round Trip). Convert from KM if necessary (1km = 0.621mi).
-                - **Costs**: Calculate monthly fuel costs based on the **Round Trip** distance (20 days/month) using $0.91/L ($3.44/gal approx) and estimated PR-22/PR-52 tolls. 
-            3.  **Cost of Living (The "LUMA Delta")**: Estimated monthly costs for housing and utilities in ${formData.workingIn}. Specifically calculate the energy cost impact using the $0.33/kWh benchmark.
+                - **Costs**: Calculate monthly fuel costs based on the **Round Trip** distance (20 days/month) using the dated DACO planning input above and clearly label tolls as estimates.
+            3.  **Cost of Living (Energy Delta)**: Estimated monthly costs for housing and utilities in ${formData.workingIn}. Specifically calculate the energy cost impact using the dated PREB benchmark above.
             4.  **Recruiter Recommendations**: 
                 - Calculate a "Quality of Life Score" (out of 10).
                 - Suggest "Expert Benchmark" salaries (Min, Ideal).
@@ -171,7 +164,7 @@ export default function App() {
                     * 7-8: Strong fit (Relevant exp, minor gaps).
                     * 0-6: Significant gaps. 
                     * NEVER return 0 if a CV is present. Provide a 2-sentence summary justification.
-            5.  **Compensation Structure**: W2 Breakdown + Equivalent 1099 and Form 480 (PR Services) salaries. Explain the 4% tax benefit under Act 60 if applicable for professional services.
+            5.  **Compensation Structure**: W-2 breakdown + equivalent independent-contractor and Form 480 compensation. Treat 10% professional-services withholding as prepayment, not final tax. Do not assume Act 60 eligibility or a 4% rate; mention it only when a qualifying decree is documented and recommend advice from a Puerto Rico tax professional.
             6.  **Onboarding Plan**: A technical 30-60-90 day plan focused on GMP training, site-specific safety, and validation compliance.
             7.  **CV Evaluation (Expert Critique)**: 
                 ${jdBase64 ? `CRITICAL: Perform a detailed comparison between the CV and the provided Job Description/Secondary Document. Identify strengths, weaknesses, and direct alignment.` : `CRITICAL: Compare the CV against the specific Job Title: "${formData.jobTitle}" using pharmaceutical industry standards for Puerto Rico.`} Identify at least 3 strengths and 3 weaknesses.
@@ -778,22 +771,21 @@ export default function App() {
     setError(null);
   };
 
-  // Security Gate: Show login page if not authenticated
   if (!isLoggedIn) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-slate-900 to-black' : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'}`}>
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-start mb-4">
-          <Header />
+    <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-ink text-slate-100' : 'bg-transparent text-ink'}`}>
+      <div className="mx-auto max-w-[1500px] px-3 py-3 sm:px-6 sm:py-6 lg:px-8">
+        <div className="relative">
+          <Header hostedAuth={usesHostedChatGPTAuth} />
           <button
             onClick={toggleDarkMode}
-            className={`p-3 rounded-full shadow-lg transition-all transform hover:scale-110 ${
+            className={`absolute right-3 top-3 z-20 rounded-full p-3 shadow-tide transition-all hover:-translate-y-0.5 sm:right-5 sm:top-5 ${
               isDarkMode 
-                ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
-                : 'bg-white text-gray-700 hover:bg-gray-100'
+                ? 'bg-slate-800 text-coqui hover:bg-slate-700'
+                : 'bg-white text-ink hover:bg-shell'
             }`}
             aria-label="Toggle dark mode"
           >
@@ -801,43 +793,40 @@ export default function App() {
           </button>
         </div>
 
-        {/* Global Navigation Tabs */}
-        {isLoggedIn && (
-          <div className={`flex gap-2 mb-0 p-2 rounded-t-xl shadow-md ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+        <div className={`mt-3 flex gap-1 overflow-x-auto rounded-t-2xl border border-b-0 p-1.5 ${isDarkMode ? 'border-slate-700 bg-slate-900' : 'border-mist bg-white/80 backdrop-blur'}`} aria-label="Primary navigation">
             <button
               onClick={() => setActiveTab(ActiveTab.ANALYZER)}
-              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.ANALYZER ? (isDarkMode ? "bg-gray-900 text-blue-400 shadow-md border-t-2 border-blue-500" : "bg-white text-blue-700 shadow-md border-t-2 border-blue-600") : (isDarkMode ? "text-gray-400 hover:text-blue-400" : "text-gray-500 hover:text-blue-600")}`}
+              className={`flex min-w-max items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${activeTab === ActiveTab.ANALYZER ? "bg-ink text-white shadow" : (isDarkMode ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-shell")}`}
             >
-              💼 Opportunity Analyzer
+              <BriefcaseBusiness size={17} /> Opportunity
             </button>
             <button
               onClick={() => setActiveTab(ActiveTab.BENCHMARKS)}
-              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.BENCHMARKS ? (isDarkMode ? "bg-gray-900 text-blue-400 shadow-md border-t-2 border-blue-500" : "bg-white text-blue-700 shadow-md border-t-2 border-blue-600") : (isDarkMode ? "text-gray-400 hover:text-blue-400" : "text-gray-500 hover:text-blue-600")}`}
+              className={`flex min-w-max items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${activeTab === ActiveTab.BENCHMARKS ? "bg-ink text-white shadow" : (isDarkMode ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-shell")}`}
             >
-              💰 Salary Benchmarks
+              <ChartNoAxesCombined size={17} /> Benchmarks
             </button>
             <button
               onClick={() => setActiveTab(ActiveTab.ONBOARDING)}
-              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.ONBOARDING ? (isDarkMode ? "bg-gray-900 text-blue-400 shadow-md border-t-2 border-blue-500" : "bg-white text-blue-700 shadow-md border-t-2 border-blue-600") : (isDarkMode ? "text-gray-400 hover:text-blue-400" : "text-gray-500 hover:text-blue-600")}`}
+              className={`flex min-w-max items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${activeTab === ActiveTab.ONBOARDING ? "bg-ink text-white shadow" : (isDarkMode ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-shell")}`}
             >
-              📅 Onboarding Plan
+              <CalendarRange size={17} /> Onboarding
             </button>
             <button
               onClick={() => setActiveTab(ActiveTab.INSTRUCTIONS)}
-              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.INSTRUCTIONS ? (isDarkMode ? "bg-gray-900 text-blue-400 shadow-md border-t-2 border-blue-500" : "bg-white text-blue-700 shadow-md border-t-2 border-blue-600") : (isDarkMode ? "text-gray-400 hover:text-blue-400" : "text-gray-500 hover:text-blue-600")}`}
+              className={`flex min-w-max items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${activeTab === ActiveTab.INSTRUCTIONS ? "bg-ink text-white shadow" : (isDarkMode ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-shell")}`}
             >
-              ❓ Instructions & FAQ
+              <BookOpen size={17} /> Guide
             </button>
             <button
               onClick={() => setActiveTab(ActiveTab.CV_ANALYSIS)}
-              className={`px-6 py-3 rounded-t font-medium transition-all ${activeTab === ActiveTab.CV_ANALYSIS ? (isDarkMode ? "bg-gray-900 text-blue-400 shadow-md border-t-2 border-blue-500" : "bg-white text-blue-700 shadow-md border-t-2 border-blue-600") : (isDarkMode ? "text-gray-400 hover:text-blue-400" : "text-gray-500 hover:text-blue-600")}`}
+              className={`flex min-w-max items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${activeTab === ActiveTab.CV_ANALYSIS ? "bg-ink text-white shadow" : (isDarkMode ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-shell")}`}
             >
-              🔐 CV Analysis (Expert)
+              <FileSearch size={17} /> CV fit
             </button>
           </div>
-        )}
 
-        <main className={`rounded-b-2xl shadow-2xl overflow-hidden min-h-[600px] transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white'}`}>
+        <main className={`min-h-[600px] overflow-hidden rounded-b-3xl border shadow-tide transition-colors duration-300 ${isDarkMode ? 'border-slate-700 bg-slate-900 text-gray-100' : 'border-mist bg-white'}`}>
           {appState === AppState.RESULT && analysisData ? (
             <AnalysisResult
               data={analysisData}

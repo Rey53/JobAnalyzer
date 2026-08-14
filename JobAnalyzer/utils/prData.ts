@@ -63,10 +63,35 @@ export const getDistance = (from: string, to: string): number => {
 };
 
 export const BENCHMARKS = {
-    gasPricePerLiter: 0.92,
-    lumaRate: 0.26,
+    // Dated public benchmarks. These are refreshed manually and must never be
+    // presented as live telemetry.
+    gasPricePerLiter: 1.057,
+    gasPriceRange: '$1.027–$1.087/L',
+    gasPriceAsOf: 'July 29, 2026',
+    lumaRate: 0.28574,
+    lumaRateAsOf: 'July–September 2026',
+    professionalServicesWithholding: 0.10,
+    selfEmploymentTax: 0.153,
     avgMpg: 22,
-    workingDaysPerMonth: 20
+    workingDaysPerMonth: 20,
+    sources: [
+        {
+            label: 'DACO fuel prices',
+            url: 'https://www.daco.pr.gov/recursos/estudios-economicos/datos-de-combustible/'
+        },
+        {
+            label: 'Puerto Rico Energy Bureau order',
+            url: 'https://energia.pr.gov/wp-content/uploads/sites/7/2026/06/20260630-MI20200001-Resolucion-y-Orden.pdf'
+        },
+        {
+            label: 'Hacienda services withholding',
+            url: 'https://hacienda.pr.gov/comerciantes/patronos-y-agentes-retenedores/retencion-en-servicios-prestados'
+        },
+        {
+            label: 'IRS self-employment tax',
+            url: 'https://www.irs.gov/businesses/small-businesses-self-employed/self-employment-tax-social-security-and-medicare-taxes'
+        }
+    ]
 };
 
 export const calculateCommuteCosts = (distanceOneWay: number) => {

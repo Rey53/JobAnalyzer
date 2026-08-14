@@ -78,7 +78,7 @@ export const OnboardingView: React.FC = () => {
                         <Briefcase className="w-6 h-6" /> Expert Recruiter Tip
                     </h4>
                     <p className="text-indigo-200">
-                        Most PR Pharma sites offer a "Sign-on Bonus" clawback period of 12-24 months. Ensure your onboarding checklist includes a full benefits enrollment within the first 30 days to maximize Act 60/68 tax incentives!
+                        Confirm any sign-on repayment terms in writing, record the benefits-enrollment deadline, and verify tax questions with a qualified Puerto Rico professional. Do not assume incentive eligibility from the contract label alone.
                     </p>
                 </div>
                 <div className="absolute right-[-20px] bottom-[-20px] opacity-10">

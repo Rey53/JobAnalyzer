@@ -21,16 +21,16 @@ export const InstructionsView: React.FC = () => {
                         <h3 className="font-bold text-xl text-slate-800">How it works</h3>
                     </div>
                     <p className="text-slate-600 text-sm leading-relaxed">
-                        PharmaPace uses **Gemini 1.5 Pro** to cross-reference your CV against the specific requirements of the PR Pharma industry. It calculates commute costs, utility impact, and market benchmarks to give you a "Fair Market Scoreboard."
+                        PharmaPace compares your CV and job description with role requirements, then applies dated Puerto Rico planning inputs for commute, electricity, and contract structure. Verified inputs and estimates are labeled separately.
                     </p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-3 mb-4">
                         <ShieldCheck className="w-6 h-6 text-green-500" />
-                        <h3 className="font-bold text-xl text-slate-800">ALCOA+ Compliance</h3>
+                        <h3 className="font-bold text-xl text-slate-800">Regulated-workflow caution</h3>
                     </div>
                     <p className="text-slate-600 text-sm leading-relaxed">
-                        Every report is generated using FDA Data Integrity principles. This means your data is <strong>Attributable, Legible, Contemporaneous, Original, and Accurate</strong>. Perfect for formal recruiter presentations.
+                        Reports are decision-support drafts, not validated GMP records. Review sources, assumptions, and generated content before using a report in recruiting or any regulated workflow.
                     </p>
                 </div>
             </section>
@@ -49,7 +49,7 @@ export const InstructionsView: React.FC = () => {
                     />
                     <FAQItem 
                         question="What is the 'LUMA Delta'?"
-                        answer="Puerto Rico has higher residential energy costs ($0.33/kWh) than many areas. The LUMA Delta reflects how this specific local cost impacts your actual take-home purchasing power."
+                        answer="The Energy Delta uses the current benchmark shown on the analyzer ($0.28574/kWh for a non-subsidized 800 kWh GRS customer, July–September 2026). It is a planning input, not a forecast of your exact bill."
                     />
                     <FAQItem 
                         question="How are 1099 and 480 equivalent rates calculated?"

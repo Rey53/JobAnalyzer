@@ -147,7 +147,7 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
                     <Car className="w-6 h-6 text-green-600" />
                     Commute Cost Analysis: {commute.from || '?'} → {commute.to || '?'}
                     {strategy === 'RELOCATE' && <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded ml-2 font-bold uppercase">Inactive Scenario</span>}
-                    <TooltipInfo text="Estimates based on mapping APIs and real-time fuel price data." />
+                    <TooltipInfo text="Route and toll values may be estimates; fuel uses the dated public input shown below." />
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <StatCard label="Distance" faded={strategy === 'RELOCATE'}>
@@ -221,12 +221,12 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
                             <h4 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3 border-b border-slate-700 pb-1">Contextual Analysis</h4>
                             <p className="text-sm text-slate-300 leading-relaxed mb-4">
                                 This report differentiates between the <span className="text-white font-bold">Entry Offered Salary</span> (the initial baseline) and the <span className="text-blue-400 font-bold">Fair Market Value</span>. 
-                                In the current Puerto Rico Pharma landscape, offer values often lag behind localized hyper-inflation in utilities (LUMA) and specialized talent scarcity.
+                                The recommended range is a planning scenario informed by role fit and the dated Puerto Rico inputs shown in this report. It is not a verified employer pay band.
                             </p>
                             <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
-                                <span className="text-xs font-bold text-yellow-500 uppercase">Expert Recruiter insight</span>
+                                <span className="text-xs font-bold text-yellow-500 uppercase">Negotiation prompt</span>
                                 <p className="text-xs text-slate-400 mt-1">
-                                    "A base salary of {currencyFormatter.format(salary.yearly || 0)} today has ~12% less purchasing power than 24 months ago due to regional cost-of-living spikes. Adjusting to the 'Ideal Target' ensures long-term retention."
+                                    Compare the {currencyFormatter.format(salary.yearly || 0)} offer with the posted pay range, shift premium, annual bonus, health-plan contribution, PTO, tolls, and commute time before setting a target.
                                 </p>
                             </div>
                         </div>
@@ -253,24 +253,24 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
 
                     <div className="mt-6 pt-4 border-t border-slate-800 flex flex-wrap gap-4 text-[10px] uppercase font-bold tracking-tighter text-slate-500">
                         <span>• Data-Driven Retention Strategy</span>
-                        <span>• ALCOA+ Verified Benchmarks</span>
+                        <span>• Dated Public Inputs</span>
                         <span>• PR Industrial Sector Intelligence</span>
                     </div>
                 </div>
             </section>
 
-            {/* Live Data Telemetry & Methodology */}
+            {/* Data Inputs & Methodology */}
             <section className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm relative overflow-hidden mt-8">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl pointer-events-none"></div>
                 
                 <div className="flex items-center justify-between mb-6 relative z-10 border-b border-slate-100 pb-4">
                     <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        <Activity className="w-6 h-6 text-blue-600 animate-pulse" />
-                        Live Data Telemetry & Methodology
+                        <Activity className="w-6 h-6 text-blue-600" />
+                        Data Inputs & Methodology
                     </h3>
                     <div className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200 shadow-sm">
-                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                        SYSTEM ACTIVE
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        DATED INPUTS
                     </div>
                 </div>
 
@@ -278,20 +278,20 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
                     {/* Energy & Fuel */}
                     <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 shadow-inner">
                         <div className="flex items-center gap-2 text-slate-500 text-sm font-bold uppercase tracking-wider mb-3">
-                            <Zap className="w-4 h-4 text-amber-500" /> Live Rates
+                            <Zap className="w-4 h-4 text-amber-500" /> Public rate inputs
                         </div>
                         <ul className="space-y-3">
                             <li className="flex justify-between items-center text-sm">
                                 <span className="text-slate-600">LUMA Energy Base</span>
-                                <span className="font-mono font-bold text-slate-800">$0.33 / kWh</span>
+                                <span className="font-mono font-bold text-slate-800">$0.28574 / kWh</span>
                             </li>
                             <li className="flex justify-between items-center text-sm">
                                 <span className="text-slate-600">PR Gas Average</span>
-                                <span className="font-mono font-bold text-slate-800">${commute.gasPricePerLiter ? commute.gasPricePerLiter.toFixed(2) : "0.91"} / L</span>
+                                <span className="font-mono font-bold text-slate-800">${commute.gasPricePerLiter ? commute.gasPricePerLiter.toFixed(3) : "1.057"} / L</span>
                             </li>
                             <li className="flex justify-between items-center text-sm">
-                                <span className="text-slate-600">Status</span>
-                                <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold uppercase">Synced</span>
+                                <span className="text-slate-600">Benchmark set</span>
+                                <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold uppercase">2026-Q3</span>
                             </li>
                         </ul>
                     </div>
@@ -303,7 +303,7 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
                                 <Database className="w-4 h-4 text-blue-500" /> Data Sources
                             </div>
                             <p className="text-xs text-slate-600 leading-relaxed">
-                                Analysis powered by <strong className="text-blue-600">Google Gemini AI</strong> processing PR Industrial Knowledge Base constraints combined with real-time web grounding via Google Search API.
+                                Analysis combines uploaded documents, Puerto Rico industrial context, and dated public benchmarks. Verify company-specific and time-sensitive claims using the cited primary sources.
                             </p>
                         </div>
                         <div className="mt-3 text-[10px] text-slate-400 font-mono">
@@ -321,7 +321,7 @@ export const OpportunityAnalyzerTab: React.FC<TabProps> = ({ data }) => {
                                 <ShieldCheck className="w-4 h-4 text-blue-300" /> Confidence & Compliance
                             </div>
                             <p className="text-xs text-blue-100 leading-relaxed relative z-10">
-                                This report generates contemporaneous, time-stamped calculations designed to adhere to <strong className="text-white">ALCOA+ principles</strong> for data integrity in regulated environments.
+                                This report is a time-stamped decision-support draft. It is not a validated system record and requires human review before use in a regulated workflow.
                             </p>
                         </div>
                         <div className="mt-3 text-[10px] text-blue-300 font-mono relative z-10">
