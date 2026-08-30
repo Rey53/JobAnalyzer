@@ -12,6 +12,7 @@ export enum ActiveTab {
     ONBOARDING = 'ONBOARDING',
     INSTRUCTIONS = 'INSTRUCTIONS',
     CV_ANALYSIS = 'CV_ANALYSIS',
+    TAX_DASHBOARD = 'TAX_DASHBOARD',
 }
 
 export interface FormData {

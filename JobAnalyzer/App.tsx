@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { BookOpen, BriefcaseBusiness, CalendarRange, ChartNoAxesCombined, FileSearch, Moon, Sun } from "lucide-react";
+import { BookOpen, BriefcaseBusiness, CalendarRange, ChartNoAxesCombined, FileSearch, Moon, Sun, Wallet } from "lucide-react";
 import { GoogleGenAI, Type } from "@google/genai";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -11,6 +11,7 @@ import { BenchmarkView } from "./components/tabs/BenchmarkView";
 import { OnboardingView } from "./components/tabs/OnboardingView";
 import { InstructionsView } from "./components/tabs/InstructionsView";
 import { CVAnalysisTab } from "./components/tabs/CVAnalysisTab";
+import { TaxDashboardTab } from "./components/tabs/TaxDashboardTab";
 import type { FormData, AnalysisData } from "./types";
 import { AppState, ActiveTab } from "./types";
 import { enforceAuthentication, isAuthenticated } from "./utils/auth";
@@ -824,6 +825,12 @@ export default function App() {
             >
               <FileSearch size={17} /> CV fit
             </button>
+            <button
+              onClick={() => setActiveTab(ActiveTab.TAX_DASHBOARD)}
+              className={`flex min-w-max items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${activeTab === ActiveTab.TAX_DASHBOARD ? "bg-ink text-white shadow" : (isDarkMode ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-shell")}`}
+            >
+              <Wallet size={17} /> Tax Dashboard
+            </button>
           </div>
 
         <main className={`min-h-[600px] overflow-hidden rounded-b-3xl border shadow-tide transition-colors duration-300 ${isDarkMode ? 'border-slate-700 bg-slate-900 text-gray-100' : 'border-mist bg-white'}`}>
@@ -865,6 +872,9 @@ export default function App() {
               {activeTab === ActiveTab.INSTRUCTIONS && <InstructionsView />}
               {activeTab === ActiveTab.CV_ANALYSIS && (
                 <CVAnalysisTab data={analysisData || ({} as AnalysisData)} />
+              )}
+              {activeTab === ActiveTab.TAX_DASHBOARD && (
+                <TaxDashboardTab isDarkMode={isDarkMode} />
               )}
             </>
           )}

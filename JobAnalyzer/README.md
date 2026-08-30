@@ -15,6 +15,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/10NJSrkkteAqo2h5CqBDlS-
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY` for the existing Gemini integration.
+3. If a server-side OpenAI integration is added, set `OPENAI_API_KEY` in `.env.local`. Never expose an OpenAI key through a `VITE_` variable because Vite includes those values in the browser bundle.
+4. Run the app:
    `npm run dev`
