@@ -1,0 +1,15 @@
+# Hostinger/Apache Compatible HTACCESS for Pharma Specialist Portal (PSP)
+Options +FollowSymLinks -MultiViews
+RewriteEngine On
+RewriteBase /
+
+# Force trailing slash if not file/dir
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)/$ /$1 [L,R=301]
+
+# Handle routing to index.php
+RewriteRule ^index\.html$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
