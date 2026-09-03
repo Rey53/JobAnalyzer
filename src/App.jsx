@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, 
@@ -51,6 +51,63 @@ function App() {
   const [loginError, setLoginError] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [pairedWeekHours, setPairedWeekHours] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadPairedWeekHours = async () => {
+      const currentHours = Number(totals?.totalHours) || 0;
+      const pairedStart = new Date(`${profInfo?.weekStart}T00:00:00`);
+      pairedStart.setDate(pairedStart.getDate() + (weekNumber % 2 === 0 ? -7 : 7));
+      const pairedWeekStart = pairedStart.toISOString().split('T')[0];
+
+      setPairedWeekHours(
+        weekNumber % 2 === 0
+          ? { first: null, second: currentHours }
+          : { first: currentHours, second: null },
+      );
+
+      let otherHours = null;
+      try {
+        const { data } = await supabase
+          .from('timesheets')
+          .select('payload')
+          .eq('professional_email', profInfo?.recipientEmail)
+          .eq('payload->>weekStart', pairedWeekStart)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (data?.payload) {
+          const savedTotal = Number(data.payload.totals?.totalHours);
+          otherHours = Number.isFinite(savedTotal)
+            ? savedTotal
+            : (data.payload.entries || []).reduce(
+                (sum, entry) => sum + (Number(entry.hours) || 0),
+                0,
+              );
+        }
+      } catch (error) {
+        console.warn('Unable to load the paired timesheet hours.', error);
+      }
+
+      if (!active) return;
+      setPairedWeekHours(
+        weekNumber % 2 === 0
+          ? { first: otherHours, second: currentHours }
+          : { first: currentHours, second: otherHours },
+      );
+    };
+
+    if (profInfo?.weekStart && profInfo?.recipientEmail) {
+      void loadPairedWeekHours();
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [profInfo?.weekStart, profInfo?.recipientEmail, totals?.totalHours, weekNumber]);
 
   const sendTimesheet = async () => {
     if (!profInfo.name || !profInfo.company || !profInfo.weekStart || !profInfo.recipientEmail) {
@@ -220,7 +277,7 @@ function App() {
     );
   }
 
-  const getDepositDateText = (weekStartStr, currentWeekNum) => {
+  const getDepositDateText = (weekStartStr, currentWeekNum, periodHours) => {
     if (!weekStartStr) return '';
     const d = new Date(weekStartStr + 'T00:00:00');
     if (currentWeekNum % 2 !== 0) {
@@ -230,7 +287,19 @@ function App() {
     const m = (d.getMonth() + 1).toString().padStart(2, '0');
     const day = d.getDate().toString().padStart(2, '0');
     const y = d.getFullYear();
-    return `The next deposit will be done on Thursday ${m}/${day}/${y}.`;
+    const firstWeek = currentWeekNum % 2 === 0 ? currentWeekNum - 1 : currentWeekNum;
+    const secondWeek = firstWeek + 1;
+    const formatHours = (hours) =>
+      Number.isInteger(hours) ? String(hours) : Number(hours).toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+    const firstHours = periodHours?.first;
+    const secondHours = periodHours?.second;
+
+    if (firstHours === null || firstHours === undefined || secondHours === null || secondHours === undefined) {
+      return `The next deposit covers Week #${firstWeek} and Week #${secondWeek} and will be made on Thursday ${m}/${day}/${y}. The paired total will update when both timesheets are saved.`;
+    }
+
+    const totalHours = Number(firstHours) + Number(secondHours);
+    return `The next deposit covers Week #${firstWeek} (${formatHours(firstHours)} hours) + Week #${secondWeek} (${formatHours(secondHours)} hours) = ${formatHours(totalHours)} total hours and will be made on Thursday ${m}/${day}/${y}.`;
   };
 
   const getMinimedTenureText = () => {
@@ -328,7 +397,7 @@ function App() {
         <div className="info-banner glass" style={{ marginTop: '-12px', marginBottom: '24px', borderColor: 'rgba(79, 110, 247, 0.3)', background: 'rgba(79, 110, 247, 0.05)' }}>
           <AlertCircle size={18} color="var(--accent)" />
           <span>
-            <strong>Important:</strong> This timesheet must be submitted every Tuesday before 5:00 PM to accounts@eqvalpr.com. {getDepositDateText(profInfo?.weekStart, weekNumber)}
+            <strong>Important:</strong> This timesheet must be submitted every Tuesday before 5:00 PM to accounts@eqvalpr.com. {getDepositDateText(profInfo?.weekStart, weekNumber, pairedWeekHours)}
           </span>
         </div>
 
